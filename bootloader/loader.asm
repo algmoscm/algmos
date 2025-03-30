@@ -166,7 +166,7 @@ loader_code_Start:
 
     ; 设置 int 0x13 参数
     mov ah, 0x02   ; 功能号：读取扇区
-    mov al, 50      ; 读取 1 个扇区
+    mov al, 52      ; 读取 1 个扇区
     mov ch, 0      ; 柱面号 0
     mov cl, 17      ; 扇区号 1（LBA 0）
     mov dh, 0      ; 磁头号 0
@@ -179,7 +179,7 @@ loader_code_Start:
 	push	ds
 	push	esi
 
-	mov	cx,	512*50
+	mov	cx,	512*52
 
 	mov	edi,OffsetOfKernelFile
 
@@ -225,15 +225,6 @@ Get_VBE_Info_Block:
 	int	10h
 
 
-
-
-	mov	ax,	0x00
-	mov	es,	ax
-	; mov	esi,	0x8000
-mov byte [es:0x8000],42
-mov byte [es:0x8001],56
-mov byte [es:0x8002],32
-mov byte [es:0x8003],45
 
 	mov	ax,	0x00
 	mov	es,	ax
@@ -283,53 +274,6 @@ mov byte [es:0x8003],45
 		mov	bp,	GetSVGAVBEInfoOKMessage
 		int	10h
 
-
-
-    ; mov si, vbe_signature_msg
-    ; call print_string
-    
-    ; mov si, VBE_INFO_BLOCK_ADDR
-    ; mov cx, 4            ; 签名长度为4字节
-    ; call print_hex_bytes
-    ; call print_newline
-
-	; mov	ax,	0300h
-	; mov	bx,	0000h
-	; int	10h
-	; add dh,1
-	; mov dl,0
-
-	; mov	ax,	1301h
-	; mov	bx,	000Fh
-	; mov	cx,	4
-	; push	ax
-	; mov	ax,	0
-	; mov	es,	ax
-	; pop	ax
-	; mov	bp,	0x8000
-	; int	10h
-
-	; mov	ax,	0
-	; mov	es,	ax
-
-
-	; mov	ax,	0300h
-	; mov	bx,	0000h
-	; int	10h
-	; add dh,1
-	; mov dl,0
-
-	; mov	ax,	1301h
-	; mov	bx,	000Fh
-	; mov	cx,	2
-	; push	ax
-	; mov	ax,	0
-	; mov	es,	ax
-	; pop	ax
-	; mov	bp,	0x8004
-	; int	10h
-
-	; jmp	$
 ;____________________Get Mdoes Info Block__________________
 	mov	ax,	0300h
 	mov	bx,	0000h
@@ -348,73 +292,98 @@ mov byte [es:0x8003],45
 	int	10h
 
 
-; mov dword [es:0x8000],'V'
-; mov dword [es:0x8001],'B'
-; mov dword [es:0x8002],'E'
-; mov dword [es:0x8003],'2'
-
-; mov dword [es:0x8000],'VBE2'
-; VBE2
-
-; move 
-
-
-; 	mov	eax,	80*2*10
-; 	mov	[DisplayPosition],	eax
-
-
-; 	mov	ax,	0x00
-; 	mov	es,	ax
-; 	mov	esi,	0x8000
-
-; 	; mov	esi,	dword	[es:si]
-; 	mov	edi,	0x8200
-
-; Label_SVGA_Mode_Info_Get:
-
-; 	mov	cx,	word	[es:esi]
-
-; ;=======	display SVGA mode information
-
-; 	push	ax
-	
-; 	mov	ax,	00h
-; 	mov	al,	ch
-; 	call	Label_DispAL
-
-; 	mov	ax,	00h
-; 	mov	al,	cl	
-; 	call	Label_DispAL
-	
-; 	pop	ax
-
-; ;=======
-	
-; 	cmp	cx,	0FFFFh
-; 	jz	Label_SVGA_Mode_Info_Finish
-
 	mov	ax,	0x00
 	mov	es,	ax
-	; mov	esi,	0x8000
-	; mov	esi,	dword	[es:si]
+
+    mov word [es:0x8400], 0;x
+    mov word [es:0x8402], 0;y
+    mov word [es:0x8404], 0;mode
+    mov word [es:0x8406], 0;byte per pixel
+
+call detect_max_resolution
+
+	; jmp	$
+	mov	ax,	0x00
+	mov	es,	ax
 	mov	di,	0x8200
-
 	mov	ax,	4F01h
-	mov cx,	103h	;========================mode : 0x115 800*600 4byte
+	mov cx,	word [es:0x8404]	;========================mode : 0x115 800*600 4byte
 	int	10h
-
 	cmp	ax,	004Fh
 	jnz	Label_SVGA_Mode_Info_FAIL
 	jz	Label_SVGA_Mode_Info_Finish
-	; jnz	Label_SVGA_Mode_Info_FAIL	
 
-; 	inc	dword		[SVGAModeCounter]
-; 	add	esi,	2
-; 	add	edi,	0x100
 
-; 	add	dword [DisplayPosition],	2
-; 	jmp	Label_SVGA_Mode_Info_Get
-		
+    ; mov [max_width], ax
+    ; mov [max_height], bx
+    ; mov [best_mode], cx
+
+
+; jmp Label_SVGA_Mode_Info_Finish
+
+
+
+; 检测最大分辨率函数
+detect_max_resolution:
+    pusha
+	mov cx,100h
+
+	.loop:
+		mov bx, 0x4100
+		add bx,cx
+
+		call test_vga_mode
+		loop .loop
+			; jmp	$
+    popa
+    ret
+
+; 测试特定VGA模式是否可用
+; 输入: Bx = 模式号
+test_vga_mode:
+    pusha
+    
+
+
+	mov	ax,	0x00
+	mov	es,	ax
+	mov	di,	0x8200
+
+	mov	ax,	4F01h
+	mov cx,	bx	;========================mode : 0x115 800*600 4byte
+	int	10h
+
+	cmp	ax,	004Fh
+    jne .mode_failed
+
+    
+    ; 3. 检查分辨率是否比当前最佳模式更高
+    mov ax, word [es:0x8200 + 0x12]  ; X分辨率
+    mov bx, word [es:0x8200 + 0x14]  ; Y分辨率
+	xor dx,dx
+	mov dl, byte [es:0x8200 + 0x19]  ; pixel byte
+    
+    ; cmp ax, word [es:0x8400]
+    ; jb .mode_failed
+	cmp ax, 0x780
+    jnz .mode_failed
+
+    cmp bx, word [es:0x8402]
+    jb .mode_failed
+	cmp dl, byte [es:0x8406]
+    jb .mode_failed
+    
+    ; 更新最佳模式
+    mov word [es:0x8400], ax
+    mov word [es:0x8402], bx
+	mov word [es:0x8404], cx
+	mov byte [es:0x8406], dl
+    ; mov dword [liner_address],
+	.mode_failed:
+		popa
+		ret
+
+
 
 
 ; jmp	$
@@ -530,18 +499,17 @@ Label_SVGA_Mode_Info_Finish:
 	
 
 
-	mov	ax,	4F02h
-	mov	bx,	4103h	;========================mode : 4115 800*600 4byte
-	int 	10h
+	push es
+	mov ax,0
+	mov es,ax
 
+	mov	ax,	4F02h
+	mov	bx,	[es:0x8404]	;========================mode : 4115 800*600 4byte 103
+	int 	10h
+	pop es
 	cmp	ax,	004Fh
 	jnz	Label_SET_SVGA_Mode_VESA_VBE_FAIL
 
-
-    ; 设置 VGA 图形模式 0x13 (320x200 256色)
-
-    ; mov ax, 0x13
-    ; int 0x10
 
 ;=======	init IDT GDT goto protect mode 
 
@@ -736,7 +704,11 @@ SVGAModeCounter		dd	0
 
 DisplayPosition		dd	0
 
-
+    current_mode dw 0
+    max_width dw 0
+    max_height dw 0
+    best_mode dw 0  ; 存储找到的最佳模式
+    liner_address dd 0  ; 存储找到的最佳模式
 ;=======	display messages
 
 
