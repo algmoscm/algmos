@@ -33,11 +33,21 @@
 
 
 mov r8, 0
-mov r9, 0
+mov r9, 20
 mov rsi, messages
-; jmp $
 call draw_string
-mov rax,0x99
+
+
+mov rdi, 0xFFFF800003000000
+mov rax,0
+mov rbx,40
+mov rcx,30
+mov rsi,0xffff800000008800
+call print_hex_str
+
+;  call print_hex_byte
+
+
 jmp $
 
 
@@ -90,8 +100,6 @@ putc: ; draw a character
     mov rax,rsi
     mov rbx,rax
     pop rsi
-    ; mov rax,messages
-; jmp $
     mov rcx, 16                ; 16行高度
     push rdi               ; 保存当前行起始位置
     .next_line:
@@ -103,32 +111,22 @@ putc: ; draw a character
         .next_pixel:
             xor rax,rax
             mov al,byte [byte_per_pixel]
-            
+
             test dl, 0x80       ; 测试最高位
             jz .skip_pixel
 
 
             cmp al,4
             jb .pixel_2byte
-            mov byte [rdi+2], 0x20 ; 绘制像素(白色)
-            mov byte [rdi+3], 0x00 ; 绘制像素(白色)
+            mov byte [rdi+2], 0x00 ; 绘制像素(白色)
+            mov byte [rdi+3], 0xff ; 绘制像素(白色)
             .pixel_2byte:
-                mov byte [rdi], 0x00 ; 绘制像素(白色)
-                mov byte [rdi+1], 0x22 ; 绘制像素(白色)
+                mov byte [rdi], 0xff ; 绘制像素(白色)
+                mov byte [rdi+1], 0x00 ; 绘制像素(白色)
             ; jmp $
         .skip_pixel:
             shl dl, 1           ; 移到下一位
-
-            ; cmp al,4
-            ; jb .pixel_2byte_1
-            ; sub rdi,2
-            ; .pixel_2byte_1:
             add rdi,rax
-; jmp $
-            ; inc rdi             ; 下一个像素位置
-            ; inc rdi             ; 下一个像素位置
-            ; inc rdi             ; 下一个像素位置
-            ; inc rdi             ; 下一个像素位置
             dec dh
             jnz .next_pixel
         
@@ -141,7 +139,6 @@ putc: ; draw a character
         mov bl,byte [byte_per_pixel]
         imul rax,rbx
         mov rbx,r8
-;    jmp $     
         add rdi,rax; 移到下一行(320=屏幕宽度)
         ; jmp $
         inc rbx                 ; 下一个字模字节
@@ -150,50 +147,6 @@ putc: ; draw a character
                 ; jmp $
     pop rdi                 ; 恢复行起始位置
     ret
-
-    ; 绘制一个红色像素 (颜色值 0x04) 在 (x=100, y=100)
-
-        ; mov rdi, 0xffff8000000B8000 ; 帧缓冲区起始地址
-        ; mov dword   [rdi], 'abcd'  ; 红色像素 (ARGB: 0x00FF0000)
-        
-        ; mov es, ax
-        ; mov di, 100 * 320 + 100  ; 计算像素偏移量: y * 320 + x
-        ; mov al, 0x04    ; 颜色值 (红色)
-        ; mov byte [es:di], al ; 写入显存
-
-        ; mov rdi, 0xffff8000000B8000
-        ; mov rax,2
-        ; mov rbx,0
-        ; mov rcx,3
-        ; mov rsi,messages
-        ; call print
-
- 
-        ; mov rdi, 0xffff8000000B8000
-        ; mov rax,0
-        ; mov rbx,0
-        ; mov rcx,512
-        ; mov rsi,0xffff800003009229
-        ; call print_hex_str
-
-        ; mov rdi, 0xffff8000000B8000
-        ; mov rax,5
-        ; mov rbx,0
-        ; mov rcx,200
-        ; mov rsi,0x8022
-        ; call print_hex_str
-
-
-        ; mov rdi, 0xffff8000000B8000
-        ; mov rax,0
-        ; mov rbx,0
-        ; mov rcx,512
-        ; mov rsi,0xc0009160
-        ; call print_hex_str
-
-
-
-        jmp	$
 
 print:
     cmp rcx, 0
@@ -218,24 +171,36 @@ print_hex_str:
     cmp rcx, 0
     je .done
 
-    push rbx
-    mov rbx,    160
+    push rax
+    mov rax,    1920
+    mul rbx
+    mov rbx,rax
+    pop rax
+    add rax ,rbx
+    mov rbx,rax
+
+    mov rax,4
     mul rbx
     add rdi, rax
-    pop rbx
-    .str:
 
+    .str:
+        push rcx
         call print_hex_byte
+
         inc rsi
         call print_hex_byte
+                ; jmp $
         inc rsi
-        add rdi,2
+        add rdi,32
+        pop rcx
         dec rcx
         cmp rcx, 0
         jne .str
     .done:
         ret
 print_hex_byte:
+        xor rax,rax
+        xor rbx,rbx
         mov bl, [rsi]
         .h4:
             mov al, bl
@@ -246,20 +211,29 @@ print_hex_byte:
             add al, 'A'-'0'-10   ; 转换为A-F
             .digit_h4:
                 add al, '0'          ; 转换为0-9
-                mov [rdi], al
-                add rdi,2
+                mov bl, al
+                call putc
+                ; mov [rdi], al
+                ; add rdi,2
+                add rdi,32
 
         .l4:
+                xor rax,rax
+        xor rbx,rbx
+        mov bl, [rsi]
             mov al, bl
             and al, 0x0F
-
+; jmp $
             cmp al, 10
             jl .digit_l4
             add al, 'A'-'0'-10   ; 转换为A-F
             .digit_l4:
                 add al, '0'          ; 转换为0-9
-                mov [rdi], al
-                add rdi,2
+                mov bl, al
+                call putc
+                add rdi,32
+                ; mov [rdi], al
+                ; add rdi,2
         ret
 
 print_string:
@@ -282,5 +256,6 @@ xpixel:   dw 0
 ypixel:   dw 0
 byte_per_pixel:   db 0
 
-messages: db 'asdfghijklmnopqrstuvwxyz_ASDFGHJKLZXCVBNM1234567890', 0
+messages: db 'codfjgcg', 0
+messages1: db 'asdfghijklmnopqrstuvwxyz_ASDFGHJKLZXCVBNM1234567890', 0
 messages2: times 10 db 0

@@ -74,7 +74,7 @@ OffsetOfKernelFile	equ	0x100000
 BaseTmpOfKernelAddr	equ	0x9000
 OffsetTmpOfKernelFile	equ	0x0000
 
-MemoryStructBufferAddr	equ	0x7E00
+MemoryStructBufferAddr	equ	0x8800
 
 LABEL_ttt:			dd	0xFFFFFFFF,0xFFFFFFFF
 
@@ -115,12 +115,12 @@ loader_code_Start:
 	mov	ds,	ax
 	mov	es,	ax
 	mov	ss,	ax	;10000:0000
-	mov	sp,	0x00
+	mov	sp,	0x8000
 
 
 	mov	ax, 0B800h
 	mov	gs, ax
-
+; jmp $
 ;=======	display on screen : Start Loader......
 
 	mov	ax,	1301h
@@ -314,14 +314,6 @@ call detect_max_resolution
 	jz	Label_SVGA_Mode_Info_Finish
 
 
-    ; mov [max_width], ax
-    ; mov [max_height], bx
-    ; mov [best_mode], cx
-
-
-; jmp Label_SVGA_Mode_Info_Finish
-
-
 
 ; 检测最大分辨率函数
 detect_max_resolution:
@@ -389,55 +381,6 @@ test_vga_mode:
 ; jmp	$
 
 
-
-
-; 	mov	eax,	80*2*10
-; 	mov	[DisplayPosition],	eax
-
-
-; 	mov	ax,	0x00
-; 	mov	es,	ax
-; 	mov	si,	0x800e
-
-; 	mov	esi,	dword	[es:si]
-; 	mov	edi,	0x8200
-
-; Label_SVGA_Mode_Info_Get:
-
-; 	mov	cx,	word	[es:esi]
-
-; ;=======	display SVGA mode information
-
-; 	push	ax
-	
-; 	mov	ax,	00h
-; 	mov	al,	ch
-; 	call	Label_DispAL
-
-; 	mov	ax,	00h
-; 	mov	al,	cl	
-; 	call	Label_DispAL
-	
-; 	pop	ax
-
-; ;=======
-	
-; 	cmp	cx,	0FFFFh
-; 	jz	Label_SVGA_Mode_Info_Finish
-
-; 	mov	ax,	4F01h
-; 	int	10h
-
-; 	cmp	ax,	004Fh
-
-; 	jnz	Label_SVGA_Mode_Info_FAIL	
-
-; 	inc	dword		[SVGAModeCounter]
-; 	add	esi,	2
-; 	add	edi,	0x100
-
-; 	add	dword [DisplayPosition],	2
-; 	jmp	Label_SVGA_Mode_Info_Get
 		
 Label_SVGA_Mode_Info_FAIL:
 
@@ -465,7 +408,6 @@ Label_SVGA_Mode_Info_Finish:
 
 	mov	ax,	1301h
 	mov	bx,	000Fh
-
 	mov	cx,	30
 	push	ax
 	mov	ax,	ds
@@ -474,8 +416,80 @@ Label_SVGA_Mode_Info_Finish:
 	mov	bp,	GetSVGAModeInfoOKMessage
 	int	10h
 
-; jmp $
 
+
+
+;=======	get memory address size type
+	mov	ax,	0300h
+	mov	bx,	0000h
+	int	10h
+	add dh,1
+	mov dl,0
+	mov	ax,	1301h
+	mov	bx,	000Fh
+	mov	cx,	44
+
+	push	ax
+	mov	ax,	ds
+	mov	es,	ax
+	pop	ax
+	mov	bp,	StartGetMemStructMessage
+	int	10h
+	mov	ebx,	0
+	mov	ax,	0x00
+	mov	es,	ax
+	mov	di,	MemoryStructBufferAddr	
+
+Label_Get_Mem_Struct:
+
+	mov	eax,	0x0E820
+	mov	ecx,	20
+	mov	edx,	0x534D4150
+	int	15h
+	jc	Label_Get_Mem_Fail
+	add	di,	20
+	inc	dword	[MemStructNumber]
+
+	cmp	ebx,	0
+	jne	Label_Get_Mem_Struct
+	jmp	Label_Get_Mem_OK
+
+Label_Get_Mem_Fail:
+
+	mov	dword	[MemStructNumber],	0
+
+	mov	ax,	0300h
+	mov	bx,	0000h
+	int	10h
+	add dh,1
+	mov dl,0
+
+	mov	ax,	1301h
+	mov	bx,	008Ch
+	mov	cx,	23
+	push	ax
+	mov	ax,	ds
+	mov	es,	ax
+	pop	ax
+	mov	bp,	GetMemStructErrMessage
+	int	10h
+
+Label_Get_Mem_OK:
+	mov	ax,	0300h
+	mov	bx,	0000h
+	int	10h
+	add dh,1
+	mov dl,0
+
+	mov	ax,	1301h
+	mov	bx,	000Fh
+	mov	cx,	29
+	push	ax
+	mov	ax,	ds
+	mov	es,	ax
+	pop	ax
+	mov	bp,	GetMemStructOKMessage
+	int	10h	
 
 
 ;-----------------------set VESA VBE mode------------------------;
