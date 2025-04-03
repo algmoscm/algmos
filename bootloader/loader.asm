@@ -1,82 +1,13 @@
+%include "../bootloader/global_def.asm"
 
-;|----------------------|
-;|	100000 ~ END	|
-;|	   KERNEL	|
-;|----------------------|
-;|	E0000 ~ 100000	|
-;| Extended System BIOS |
-;|----------------------|
-;|	C0000 ~ Dffff	|
-;|     Expansion Area   |
-;|----------------------|
-;|	A0000 ~ bffff	|
-;|   Legacy Video Area  |
-;|----------------------|
-;|	9F000 ~ A0000	|
-;|	 BIOS reserve	|
-;|----------------------|
-;|	90000 ~ 9F000	|
-;|	 kernel tmpbuf	|
-;|----------------------|
-;|	10000 ~ 90000	|
-;|	   LOADER	|
-;|----------------------|
-;|	8000 ~ 10000	|
-;|	  VBE info	|
-;|----------------------|
-;|	7E00 ~ 8000	|
-;|	  mem info	|
-;|----------------------|
-;|	7C00 ~ 7E00	|
-;|	 MBR (BOOT)	|
-;|----------------------|
-;|	0000 ~ 7C00	|
-;|	 BIOS Code	|
-;|----------------------|
+[BITS 16]          ; 16位实模式
+[ORG 0x10000]       ; BIOS 加载引导扇区到 0x10000
 
-
-
-
-
-
-
-
-
-
-;______________________________________________
-; ----------------Vbe Info Block------------
-; typedef struct {
-;     unsigned char       vbe_signature;
-;     unsigned short      vbe_version;
-;     unsigned long       oem_string_ptr;
-;     unsigned char       capabilities;
-;     unsigned long       video_mode_ptr;
-;     unsigned short      total_memory;
-;     unsigned short      oem_software_rev;
-;     unsigned long       oem_vendor_name_ptr;
-;     unsigned long       oem_product_name_ptr;
-;     unsigned long       oem_product_rev_ptr;
-;     unsigned char       reserved[222];
-;     unsigned char       oem_data[256];  
-; } VbeInfoBlock;
-;______________________________________________
-
-format binary as 'img'  ; 输出为二进制格式
-
-org	0000h
 loader_Start:
 
 	jmp loader_code_Start
 
-BaseOfKernelFile	equ	0x00
-OffsetOfKernelFile	equ	0x100000
 
-BaseTmpOfKernelAddr	equ	0x9000
-OffsetTmpOfKernelFile	equ	0x0000
-
-MemoryStructBufferAddr	equ	0x8800
-
-LABEL_ttt:			dd	0xFFFFFFFF,0xFFFFFFFF
 
 GDT32_START:
 LABEL_GDT:			dd	0,0
@@ -86,7 +17,7 @@ GDT32_END:
 
 
 GdtPtr:	dw	GDT32_END - GDT32_START - 1
-		dd	GDT32_START + 0x10000
+		dd	GDT32_START
 
 SelectorCode32	equ	(LABEL_DESC_CODE32 - LABEL_GDT)
 SelectorData32	equ	(LABEL_DESC_DATA32 - LABEL_GDT)
@@ -99,16 +30,13 @@ LABEL_DESC_DATA64:	dq	0x0000920000000000
 GDT64_END:
 
 GdtPtr64:	dw	GDT64_END - GDT64_START - 1
-			dd	GDT64_START + 0x10000
+			dd	GDT64_START
 
 
 SelectorCode64	equ	(LABEL_DESC_CODE64 - LABEL_GDT64)
 SelectorData64	equ	(LABEL_DESC_DATA64 - LABEL_GDT64)
 
-StartLoaderMessage:	db	"Start Loader"
 
-
-use16
 loader_code_Start:
 
 	mov	ax,	cs
@@ -120,9 +48,9 @@ loader_code_Start:
 
 	mov	ax, 0B800h
 	mov	gs, ax
-; jmp $
-;=======	display on screen : Start Loader......
 
+;--------display on screen : Start Loader-----------;
+;---------------------------------------------------;
 	mov	ax,	1301h
 	mov	bx,	000fh
 	mov	dx,	0100h		;row 2
@@ -135,8 +63,7 @@ loader_code_Start:
 	int	10h
 
 
-
-;=======	open address A20
+;-----------------open address A20------------------;
 	push	ax
 	in	al,	92h
 	or	al,	00000010b
@@ -145,7 +72,7 @@ loader_code_Start:
 
 	cli
 
-	lgdt	[cs:GdtPtr]
+	lgdt	[GdtPtr]
 
 	mov	eax,	cr0
 	or	eax,	1
@@ -205,7 +132,7 @@ Label_Mov_Kernel:
 	pop	eax
 	pop	cx
 
-;____________________Get VBE Info Block____________________
+;-----------------Get VBE Info Block------------------;
 Get_VBE_Info_Block:
 	mov	ax,	0300h
 	mov	bx,	0000h
@@ -225,10 +152,9 @@ Get_VBE_Info_Block:
 	int	10h
 
 
-
 	mov	ax,	0x00
 	mov	es,	ax
-	mov	di,	0x8000
+	mov	di,	VBEStructBufferAddr
 	mov	ax,	4F00h
 
 	int	10h
@@ -246,7 +172,6 @@ Get_VBE_Info_Block:
 
 		mov	ax,	1301h
 		mov	bx,	008Ch
-		; mov	dx,	0900h		;row 9
 		mov	cx,	23
 		push	ax
 		mov	ax,	ds
@@ -274,7 +199,8 @@ Get_VBE_Info_Block:
 		mov	bp,	GetSVGAVBEInfoOKMessage
 		int	10h
 
-;____________________Get Mdoes Info Block__________________
+		
+;-----------------Get Mdoes Info Block------------------;
 	mov	ax,	0300h
 	mov	bx,	0000h
 	int	10h
@@ -300,7 +226,7 @@ Get_VBE_Info_Block:
     mov word [es:0x8404], 0;mode
     mov word [es:0x8406], 0;byte per pixel
 
-call detect_max_resolution
+	call detect_max_resolution
 
 	; jmp	$
 	mov	ax,	0x00
@@ -378,7 +304,7 @@ test_vga_mode:
 
 
 
-; jmp	$
+
 
 
 		
@@ -418,8 +344,7 @@ Label_SVGA_Mode_Info_Finish:
 
 
 
-
-;=======	get memory address size type
+;-----------------get memory address size type------------------;
 	mov	ax,	0300h
 	mov	bx,	0000h
 	int	10h
@@ -494,8 +419,6 @@ Label_Get_Mem_OK:
 
 ;-----------------------set VESA VBE mode------------------------;
 
-
-; jmp	$
 ;=======	clear screen
 
 	mov	ax,	0600h
@@ -539,13 +462,13 @@ Label_Get_Mem_OK:
 
 	db	66h
 	lgdt	[cs:GdtPtr]
-; jmp $
+
 	mov	eax,	cr0
 	or	eax,	1
 	mov	cr0,	eax	
 
 
-	jmp	pword SelectorCode32:GO_TO_TMP_Protect+0x10000
+	jmp	dword SelectorCode32:GO_TO_TMP_Protect
 
 Label_DispAL:
 
@@ -585,10 +508,8 @@ Label_DispAL:
 		
 		ret
 ;-----------------------Protect Mode-------------------------;
-; print_16:
-Protect_mode_Start:
-; org ( 0x10000 + ( Protect_mode_Start - loader_Start ) ) 
-use32
+
+[BITS 32]
 GO_TO_TMP_Protect:
 ;=======	go to tmp long mode
 
@@ -601,12 +522,12 @@ GO_TO_TMP_Protect:
 
 
 	mov	esp,	7E00h
-; jmp $
+
 	call	support_long_mode
 	test	eax,	eax
 
 	jz	no_support
-; jmp $
+
 ;=======	init template page table 0x90000 make sure there is not dirty data
 
 	mov	dword	[0x90000],	0x91007
@@ -625,11 +546,10 @@ GO_TO_TMP_Protect:
 	mov	dword	[0x92020],	0x800083
 
 	mov	dword	[0x92028],	0xa00083
-	; jmp $
 ;=======	load GDTR
 
 	db	66h
-	lgdt	[GdtPtr64+0x10000]
+	lgdt	[GdtPtr64]
 
 	mov	ax,	0x10
 	mov	ds,	ax
@@ -703,7 +623,7 @@ IDT_END:
 
 IDT_POINTER:
 		dw	IDT_END - IDT - 1
-		dd	IDT+0x10000
+		dd	IDT
 
 ;=======	tmp variable
 
@@ -718,16 +638,17 @@ SVGAModeCounter		dd	0
 
 DisplayPosition		dd	0
 
-    current_mode dw 0
-    max_width dw 0
-    max_height dw 0
-    best_mode dw 0  ; 存储找到的最佳模式
-    liner_address dd 0  ; 存储找到的最佳模式
+current_mode dw 0
+max_width dw 0
+max_height dw 0
+best_mode dw 0  ; 存储找到的最佳模式
+liner_address dd 0  ; 存储找到的最佳模式
 ;=======	display messages
 
+StartLoaderMessage:	db	"Start Loader"
 
 NoLoaderMessage:	db	"ERROR:No KERNEL Found"
-KernelFileName:		db	"KERNEL  BIN",0
+
 StartGetMemStructMessage:	db	"Start Get Memory Struct (address,size,type)."
 GetMemStructErrMessage:	db	"Get Memory Struct ERROR"
 GetMemStructOKMessage:	db	"Get Memory Struct SUCCESSFUL!"

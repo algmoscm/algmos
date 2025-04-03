@@ -5,14 +5,6 @@
 
 head_start:
 
-    ; ; 设置帧缓冲区地址（假设为 0xB8000，VGA 文本模式）
-    ; mov rdi, 0xB8000+2*2*80
-    ; ; 打印 64 位模式消息
-    ; mov rsi, head_entry_msg
-    ; call print_string_64
-
-
-
     mov ax,0x10
 	mov	ds,	ax
     mov	es,	ax
@@ -24,42 +16,10 @@ head_start:
     lgdt	[GDT_POINTER]
 	lidt	[IDT_POINTER]
 
-    ; mov ax,0x10
-	; mov	ds,	ax
-    ; mov	es,	ax
-    ; mov	fs,	ax
-    ; mov	gs,	ax
-    ; mov	ss,	ax
-    ; mov	rsp,0x7E00
-
     mov rax,0x101000
     mov cr3,rax
-    ; jmp $
-;     ; jmp 0x08:head_kernel
 
-
-;         ;  ;将栈映射到高端，否则，压栈时依然压在低端，并和低端的内容冲突。
-;         ;  ;64位模式下不支持源操作数为64位立即数的加法操作。
-;         ;  mov rax, 0xffff800000000000              ;或者加上UPPER_LINEAR_START
-;         ;  add rsp,rax                              ;栈指针必须转换为高端地址且必须是扩高地址
-
-;          ;准备让处理器从虚拟地址空间的高端开始执行（现在依然在低端执行）
-;          mov rax, 0xffff800000000000              ;或者使用常量UPPER_LINEAR_START
-;          add [rel position], rax                  ;内核程序的起始位置数据也必须转换成扩高地址
-
-;          ;内核的起始地址 + 标号.to_upper的汇编地址 = 标号.to_upper所在位置的运行时扩高地址
-;          mov rax, [rel position]
-;          add rax, .to_upper
-;          jmp rax                                  ;绝对间接近转移，从此在高端执行后面的指令
-
-; .
-;     mov	rax,head_kernel + 0xFFFF800000000000
-; 	push	qword 0x08
-; 	push	qword rax
-; 	retq
-
-    mov	rax,head_kernel_entry + 0xFFFF800000000000
-    ; jmp $
+    mov	rax,head_kernel + 0xFFFF800000000000
     jmp rax
 
 print_string_64:
@@ -76,124 +36,14 @@ print_string_64:
 
 head_entry_msg db "jump to head entry success!", 0
 
-head_end:
 ;-------------从线性地址0x100000向地址0xFFFF 8000 0010 0000切换的工作---------------
-; [ORG  0xFFFF800000100000 + ( head_end - head_start ) ] 
-; org	( 0xFFFF800000100000 + ( head_end - head_start ) )
-line_address_msg db "line address switch success!", 0
 head_kernel:
-    dq head_kernel_entry
-head_kernel_entry:
     mov ax,0x10
 	mov	ds,	ax
     mov	es,	ax
     mov	gs,	ax
     mov	ss,	ax
     mov	rsp,0xffff800000007E00
-
-    ; jmp	$
-    ; mov	rax,kernel
-	; pushq	0x08
-	; pushq	rax
-	; retq    
-    ; jmp 0x08:kernel
-
-    ; mov	rax,kernel + 0xFFFF800000000000
-	; push	qword 0x08
-	; push	qword rax
-	; retq
-    mov	rax,kernel + 0xFFFF800000000000
-    jmp rax
-
-kernel:
-
-    ; ; 设置帧缓冲区地址（假设为 0xB8000，VGA 文本模式）
-    ; mov rdi, 0xFFFF800000000000+0xB8000+4*2*80
-    ; ; jmp	$
-    ; ; 打印 64 位模式消息
-    ; mov rsi, line_address_msg + 0xFFFF800000000000
-    ; call print_string_64
-
-    ; jmp	$
-    ; mov rdi, 0xffff800000a00000  ; 帧缓冲区起始地址
-
-    ; call draw_rectangle
-
-    ; ; 无限循环
-    ; hlt
-    ; jmp $
-; 0xffff800000a00000
-; 0xffff8000e0000000
-; 0x00000000e0000000
-    ; 设置帧缓冲区地址   0xe0000000  0xffff800000a00000  0xffff80000e0000000
-    ; mov rdi, 0xffff800000a00000 ; 帧缓冲区起始地址
-
-    ; 绘制红色矩形
-    ; mov rcx, 300*1000         ; 行数
-; draw_pixel:
-        ; mov dword [rdi], 0x00FF0000  ; 红色像素 (ARGB: 0x00FF0000)
-        ; add rdi, 4           ; 移动到下一个像素
-        ; loop draw_pixel +0xffff800000000000
-
-
-
-;     mov rax, 0xffff800003000000 ; 帧缓冲区起始地址
-
-;     ; 绘制红色矩形
-;     ; mov rcx, 300*1000         ; 行数
-; ; draw_pixel:
-;         mov dword [rax], 0x00FF0000  ; 红色像素 (ARGB: 0x00FF0000)
-;         add rax, 4           ; 移动到下一个像素
-;         mov dword [rax], 0x00FF0000  ; 红色像素 (ARGB: 0x00FF0000)
-;         add rax, 4           ; 移动到下一个像素
-;                 mov dword [rax], 0x00FF0000  ; 红色像素 (ARGB: 0x00FF0000)
-;         add rax, 4           ; 移动到下一个像素
-;                 mov dword [rax], 0x00FF0000  ; 红色像素 (ARGB: 0x00FF0000)
-;         add rax, 4           ; 移动到下一个像素
-;                 mov dword [rax], 0x00FF0000  ; 红色像素 (ARGB: 0x00FF0000)
-;         add rax, 4           ; 移动到下一个像素
-
-
-    ; .draw_row:
-    ;     push rcx
-    ;     mov rcx, 200        ; 每行像素数
-        
-    ; .draw_pixel:
-    ;     mov dword [rdi], 0x00FF0000  ; 红色像素 (ARGB: 0x00FF0000)
-    ;     add rdi, 4           ; 移动到下一个像素
-    ;     loop .draw_pixel
-    ;     pop rcx
-    ;     loop .draw_row
-
-
-
-
-; 绘制矩形
-; draw_rectangle:
-;     ; 矩形属性
-;     mov rcx, 100       ; 矩形宽度
-;     mov rdx, 50        ; 矩形高度
-;     mov r8, 0x00FF00   ; 矩形颜色 (绿色)
-
-;     ; 计算 Framebuffer 地址
-;     mov rdi, 0xffff800000a00000
-;     add rdi, (1024 * 100 + 100) * 4  ; 起始位置 (100, 100)
-
-;     ; 绘制矩形
-;     mov r9, rdx
-; draw_rect_loop:
-;     mov r10, rcx
-; draw_line_loop:
-;     mov [rdi], r8d
-;     add rdi, 4
-;     dec r10
-;     jnz draw_line_loop
-;     add rdi, (1024 - rcx) * 4  ; 下一行
-;     dec r9
-;     jnz draw_rect_loop
-
-;     ret
-
 
     mov rax, 0xFFFF800000106200 ; 帧缓冲区起始地址
     jmp	rax

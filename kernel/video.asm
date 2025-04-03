@@ -2,6 +2,7 @@
 xpixel:   dw 0
 ypixel:   dw 0
 byte_per_pixel:   db 0
+; byte_per_pixel:   db 0
 
 video_init:
     mov rsi,0xFFFF800000008400
@@ -22,21 +23,17 @@ video_init:
     ret
 
 draw_pixel:
-
-ret
+    ; jmp $
+    ret
 
 draw_line:
-
-ret
+    ret
 
 draw_rect:
-
-ret
+    ret
 
 draw_screen:
-
-ret
+    ret
 
 fill_screen:
-
-ret
+    ret

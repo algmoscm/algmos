@@ -1,6 +1,5 @@
-fasm ../bootloader/boot.asm  boot.bin
-fasm ../bootloader/loader.asm  loader.bin
-# fasm ../kernel/head.asm  head.bin
+nasm ../bootloader/boot.asm  -o boot.bin
+nasm ../bootloader/loader.asm  -o loader.bin
 nasm ../kernel/head.asm  -o head.bin
 nasm ../kernel/kernel.asm  -o kernel.bin -l kernel.lst
 
@@ -11,5 +10,7 @@ dd if=head.bin of=./hd60m.img bs=512 seek=16 conv=notrunc
 dd if=kernel.bin of=./hd60m.img bs=512 seek=65 conv=notrunc
 rm -rf ./*.bin
 # qemu-system-x86_64 -S -hda ../hd60m.img -monitor stdio
-qemu-system-x86_64 -m 1024M -hda ./hd60m.img -monitor stdio -vga std -S -s
+
+qemu-system-x86_64 -m 1024M -hda ./hd60m.img -monitor stdio -vga std
+# qemu-system-x86_64 -m 1024M -hda ./hd60m.img -monitor stdio -vga std -S -s
 

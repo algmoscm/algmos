@@ -1,15 +1,16 @@
 [BITS 64]          ; 16位实模式
-[ORG 0xFFFF800000106200]       ; BIOS 加载引导扇区到 0x7C00
+; [ORG 0xFFFF800000106200]       ; BIOS 加载引导扇区到 0x7C00
 
 kernel_start:
 
 call video_init
+call printk_init
+call parse_system_params
 
 mov r8, 0
 mov r9, 20
-mov rsi, messages
+lea rsi,[rel messages]
 call draw_string
-
 
 mov rdi, 0xFFFF800003000000
 mov rax,0
@@ -20,6 +21,8 @@ call print_hex_str
 
 jmp $
 
+parse_system_params:
+    ret
 %include "../kernel/printk.asm"
 
 messages: db 'codfjgcg', 0

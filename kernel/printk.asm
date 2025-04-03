@@ -1,5 +1,8 @@
 [BITS 64]
 %include "../kernel/video.asm"
+
+printk_init:
+    ret
 ; put char
 ; input: rbx=char,rdi=vga_address
 putc: ; draw a character
@@ -198,6 +201,3 @@ print_string:
         jmp .str
     .done:
         ret
-
-    ; call draw_rectangle
-    jmp	$

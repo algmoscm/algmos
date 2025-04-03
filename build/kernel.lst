@@ -1,265 +1,284 @@
      1                                  [BITS 64]          ; 16位实模式
-     2                                  [ORG 0xFFFF800000106200]       ; BIOS 加载引导扇区到 0x7C00
+     2                                  ; [ORG 0xFFFF800000106200]       ; BIOS 加载引导扇区到 0x7C00
      3                                  
      4                                  kernel_start:
      5                                  
-     6 00000000 E84A000000              call video_init
-     7                                  
-     8 00000005 41B800000000            mov r8, 0
-     9 0000000B 41B914000000            mov r9, 20
-    10 00000011 48BE-                   mov rsi, messages
-    10 00000013 [4702000000000000] 
-    11 0000001B E8AB010000              call draw_string
-    12                                  
-    13                                  
-    14 00000020 48BF000000030080FF-     mov rdi, 0xFFFF800003000000
-    14 00000029 FF                 
-    15 0000002A B800000000              mov rax,0
-    16 0000002F BB28000000              mov rbx,40
-    17 00000034 B91E000000              mov rcx,30
-    18 00000039 48BE008800000080FF-     mov rsi,0xffff800000008800
-    18 00000042 FF                 
-    19 00000043 E8FF000000              call print_hex_str
-    20                                  
-    21 00000048 EBFE                    jmp $
-    22                                  
-    23                                  %include "../kernel/printk.asm"
+     6 00000000 E852000000              call video_init
+     7 00000005 E8A2000000              call printk_init
+     8 0000000A E842000000              call parse_system_params
+     9                                  
+    10 0000000F 41B800000000            mov r8, 0
+    11 00000015 41B914000000            mov r9, 20
+    12 0000001B 488D3531020000          lea rsi,[rel messages]
+    13 00000022 E8B2010000              call draw_string
+    14                                  
+    15 00000027 48BF000000030080FF-     mov rdi, 0xFFFF800003000000
+    15 00000030 FF                 
+    16 00000031 B800000000              mov rax,0
+    17 00000036 BB28000000              mov rbx,40
+    18 0000003B B91E000000              mov rcx,30
+    19 00000040 48BE008800000080FF-     mov rsi,0xffff800000008800
+    19 00000049 FF                 
+    20 0000004A E806010000              call print_hex_str
+    21                                  
+    22 0000004F EBFE                    jmp $
+    23                                  
+    24                                  parse_system_params:
+    25 00000051 C3                          ret
+    26                                  %include "../kernel/printk.asm"
      1                              <1> [BITS 64]
      2                              <1> %include "../kernel/video.asm"
      1                              <2> [BITS 64]
-     2 0000004A 0000                <2> xpixel:   dw 0
-     3 0000004C 0000                <2> ypixel:   dw 0
-     4 0000004E 00                  <2> byte_per_pixel:   db 0
-     5                              <2> 
-     6                              <2> video_init:
-     7 0000004F 48BE008400000080FF- <2>     mov rsi,0xFFFF800000008400
-     7 00000058 FF                  <2>
-     8 00000059 BB00000000          <2>     mov rbx,0
-     9 0000005E 668B1E              <2>     mov  bx, word [rsi]
-    10 00000061 66891C25[4A000000]  <2>     mov word [xpixel],bx
-    11                              <2> 
-    12 00000069 48BE028400000080FF- <2>     mov rsi,0xFFFF800000008402
-    12 00000072 FF                  <2>
-    13 00000073 BB00000000          <2>     mov rbx,0
-    14 00000078 668B1E              <2>     mov  bx, word [rsi]
-    15 0000007B 66891C25[4C000000]  <2>     mov word [ypixel],bx
-    16                              <2> 
-    17 00000083 48BE068400000080FF- <2>     mov rsi,0xFFFF800000008406
-    17 0000008C FF                  <2>
-    18 0000008D BB00000000          <2>     mov rbx,0
-    19 00000092 8A1E                <2>     mov bl, byte [rsi]
-    20 00000094 C0EB03              <2>     shr bl,3
-    21 00000097 881C25[4E000000]    <2>     mov byte [byte_per_pixel],bl
-    22 0000009E C3                  <2>     ret
-     3                              <1> ; put char
-     4                              <1> ; input: rbx=char,rdi=vga_address
-     5                              <1> putc: ; draw a character
-     6 0000009F 4831C0              <1>     xor rax, rax
-     7 000000A2 88D8                <1>     mov al, bl
-     8 000000A4 48C1E004            <1>     shl rax, 4                 ; 乘以16(每个字符16字节)
-     9                              <1> 
-    10 000000A8 56                  <1>     push rsi
-    11 000000A9 48BE005210000080FF- <1>     mov rsi, 0xFFFF800000105200
-    11 000000B2 FF                  <1>
-    12 000000B3 4801C6              <1>     add rsi, rax         ; RSI = 字符数据地址
-    13 000000B6 4889F0              <1>     mov rax,rsi
-    14 000000B9 4889C3              <1>     mov rbx,rax
-    15 000000BC 5E                  <1>     pop rsi
-    16 000000BD B910000000          <1>     mov rcx, 16                ; 16行高度
-    17 000000C2 57                  <1>     push rdi               ; 保存当前行起始位置
-    18                              <1>     .next_line:
-    19 000000C3 57                  <1>         push rdi               ; 保存当前行起始位置
-    20                              <1>         
-    21                              <1>         ; 处理一行(8像素)
-    22 000000C4 8A13                <1>         mov dl, [rbx]          ; 获取字模数据
-    23 000000C6 B608                <1>         mov dh, 8              ; 8位/行
-    24                              <1>         .next_pixel:
-    25 000000C8 4831C0              <1>             xor rax,rax
-    26 000000CB 8A0425[4E000000]    <1>             mov al,byte [byte_per_pixel]
-    27                              <1> 
-    28 000000D2 F6C280              <1>             test dl, 0x80       ; 测试最高位
-    29 000000D5 7413                <1>             jz .skip_pixel
+     2 00000052 0000                <2> xpixel:   dw 0
+     3 00000054 0000                <2> ypixel:   dw 0
+     4 00000056 00                  <2> byte_per_pixel:   db 0
+     5                              <2> ; byte_per_pixel:   db 0
+     6                              <2> 
+     7                              <2> video_init:
+     8 00000057 48BE008400000080FF- <2>     mov rsi,0xFFFF800000008400
+     8 00000060 FF                  <2>
+     9 00000061 BB00000000          <2>     mov rbx,0
+    10 00000066 668B1E              <2>     mov  bx, word [rsi]
+    11 00000069 66891C25[52000000]  <2>     mov word [xpixel],bx
+    12                              <2> 
+    13 00000071 48BE028400000080FF- <2>     mov rsi,0xFFFF800000008402
+    13 0000007A FF                  <2>
+    14 0000007B BB00000000          <2>     mov rbx,0
+    15 00000080 668B1E              <2>     mov  bx, word [rsi]
+    16 00000083 66891C25[54000000]  <2>     mov word [ypixel],bx
+    17                              <2> 
+    18 0000008B 48BE068400000080FF- <2>     mov rsi,0xFFFF800000008406
+    18 00000094 FF                  <2>
+    19 00000095 BB00000000          <2>     mov rbx,0
+    20 0000009A 8A1E                <2>     mov bl, byte [rsi]
+    21 0000009C C0EB03              <2>     shr bl,3
+    22 0000009F 881C25[56000000]    <2>     mov byte [byte_per_pixel],bl
+    23 000000A6 C3                  <2>     ret
+    24                              <2> 
+    25                              <2> draw_pixel:
+    26                              <2>     ; jmp $
+    27 000000A7 C3                  <2>     ret
+    28                              <2> 
+    29                              <2> draw_line:
+    30 000000A8 C3                  <2>     ret
+    31                              <2> 
+    32                              <2> draw_rect:
+    33 000000A9 C3                  <2>     ret
+    34                              <2> 
+    35                              <2> draw_screen:
+    36 000000AA C3                  <2>     ret
+    37                              <2> 
+    38                              <2> fill_screen:
+    39 000000AB C3                  <2>     ret
+     3                              <1> 
+     4                              <1> printk_init:
+     5 000000AC C3                  <1>     ret
+     6                              <1> ; put char
+     7                              <1> ; input: rbx=char,rdi=vga_address
+     8                              <1> putc: ; draw a character
+     9 000000AD 4831C0              <1>     xor rax, rax
+    10 000000B0 88D8                <1>     mov al, bl
+    11 000000B2 48C1E004            <1>     shl rax, 4                 ; 乘以16(每个字符16字节)
+    12                              <1> 
+    13 000000B6 56                  <1>     push rsi
+    14 000000B7 48BE005210000080FF- <1>     mov rsi, 0xFFFF800000105200
+    14 000000C0 FF                  <1>
+    15 000000C1 4801C6              <1>     add rsi, rax         ; RSI = 字符数据地址
+    16 000000C4 4889F0              <1>     mov rax,rsi
+    17 000000C7 4889C3              <1>     mov rbx,rax
+    18 000000CA 5E                  <1>     pop rsi
+    19 000000CB B910000000          <1>     mov rcx, 16                ; 16行高度
+    20 000000D0 57                  <1>     push rdi               ; 保存当前行起始位置
+    21                              <1>     .next_line:
+    22 000000D1 57                  <1>         push rdi               ; 保存当前行起始位置
+    23                              <1>         
+    24                              <1>         ; 处理一行(8像素)
+    25 000000D2 8A13                <1>         mov dl, [rbx]          ; 获取字模数据
+    26 000000D4 B608                <1>         mov dh, 8              ; 8位/行
+    27                              <1>         .next_pixel:
+    28 000000D6 4831C0              <1>             xor rax,rax
+    29 000000D9 8A0425[56000000]    <1>             mov al,byte [byte_per_pixel]
     30                              <1> 
-    31                              <1> 
-    32 000000D7 3C04                <1>             cmp al,4
-    33 000000D9 7208                <1>             jb .pixel_2byte
-    34 000000DB C6470200            <1>             mov byte [rdi+2], 0x00 ; 绘制像素(白色)
-    35 000000DF C64703FF            <1>             mov byte [rdi+3], 0xff ; 绘制像素(白色)
-    36                              <1>             .pixel_2byte:
-    37 000000E3 C607FF              <1>                 mov byte [rdi], 0xff ; 绘制像素(白色)
-    38 000000E6 C6470100            <1>                 mov byte [rdi+1], 0x00 ; 绘制像素(白色)
-    39                              <1>             ; jmp $
-    40                              <1>         .skip_pixel:
-    41 000000EA D0E2                <1>             shl dl, 1           ; 移到下一位
-    42 000000EC 4801C7              <1>             add rdi,rax
-    43 000000EF FECE                <1>             dec dh
-    44 000000F1 75D5                <1>             jnz .next_pixel
-    45                              <1>         
-    46 000000F3 5F                  <1>         pop rdi                 ; 恢复行起始位置
-    47 000000F4 4831C0              <1>         xor rax,rax
-    48 000000F7 668B0425[4A000000]  <1>         mov ax,word [xpixel]
-    49                              <1> 
-    50 000000FF 4989D8              <1>         mov r8,rbx
-    51 00000102 BB00000000          <1>         mov rbx,0
-    52 00000107 8A1C25[4E000000]    <1>         mov bl,byte [byte_per_pixel]
-    53 0000010E 480FAFC3            <1>         imul rax,rbx
-    54 00000112 4C89C3              <1>         mov rbx,r8
-    55 00000115 4801C7              <1>         add rdi,rax; 移到下一行(320=屏幕宽度)
-    56                              <1>         ; jmp $
-    57 00000118 48FFC3              <1>         inc rbx                 ; 下一个字模字节
-    58                              <1> 
-    59 0000011B E2A6                <1>         loop .next_line
-    60                              <1>                 ; jmp $
-    61 0000011D 5F                  <1>     pop rdi                 ; 恢复行起始位置
-    62 0000011E C3                  <1>     ret
-    63                              <1> 
-    64                              <1> print:
-    65 0000011F 4883F900            <1>     cmp rcx, 0
-    66 00000123 7421                <1>     je .done
-    67 00000125 53                  <1>     push rbx
-    68 00000126 BBA0000000          <1>     mov rbx,    160
-    69 0000012B 48F7E3              <1>     mul rbx
-    70 0000012E 4801C7              <1>     add rdi, rax
-    71 00000131 5B                  <1>     pop rbx
-    72                              <1>     .str:
-    73 00000132 8A06                <1>         mov al, [rsi]
-    74 00000134 8807                <1>         mov [rdi], al
-    75 00000136 4883C702            <1>         add rdi,2
-    76 0000013A 48FFC6              <1>         inc rsi
-    77 0000013D 48FFC9              <1>         dec rcx
-    78 00000140 4883F900            <1>         cmp rcx, 0
-    79 00000144 75EC                <1>         jne .str
-    80                              <1>     .done:
-    81 00000146 C3                  <1>         ret
-    82                              <1> 
-    83                              <1> print_hex_str:
-    84 00000147 4883F900            <1>     cmp rcx, 0
-    85 0000014B 743D                <1>     je .done
-    86                              <1> 
-    87 0000014D 50                  <1>     push rax
-    88 0000014E B880070000          <1>     mov rax,    1920
-    89 00000153 48F7E3              <1>     mul rbx
-    90 00000156 4889C3              <1>     mov rbx,rax
-    91 00000159 58                  <1>     pop rax
-    92 0000015A 4801D8              <1>     add rax ,rbx
-    93 0000015D 4889C3              <1>     mov rbx,rax
-    94                              <1> 
-    95 00000160 B804000000          <1>     mov rax,4
-    96 00000165 48F7E3              <1>     mul rbx
-    97 00000168 4801C7              <1>     add rdi, rax
-    98                              <1> 
-    99                              <1>     .str:
-   100 0000016B 51                  <1>         push rcx
-   101 0000016C E81A000000          <1>         call print_hex_byte
-   102                              <1> 
-   103 00000171 48FFC6              <1>         inc rsi
-   104 00000174 E812000000          <1>         call print_hex_byte
-   105                              <1>                 ; jmp $
-   106 00000179 48FFC6              <1>         inc rsi
-   107 0000017C 4883C720            <1>         add rdi,32
-   108 00000180 59                  <1>         pop rcx
-   109 00000181 48FFC9              <1>         dec rcx
-   110 00000184 4883F900            <1>         cmp rcx, 0
-   111 00000188 75E1                <1>         jne .str
-   112                              <1>     .done:
-   113 0000018A C3                  <1>         ret
-   114                              <1> print_hex_byte:
-   115 0000018B 4831C0              <1>         xor rax,rax
-   116 0000018E 4831DB              <1>         xor rbx,rbx
-   117 00000191 8A1E                <1>         mov bl, [rsi]
-   118                              <1>         .h4:
-   119 00000193 88D8                <1>             mov al, bl
-   120 00000195 C0E804              <1>             shr al, 4
-   121                              <1> 
-   122 00000198 3C0A                <1>             cmp al, 10
-   123 0000019A 7C02                <1>             jl .digit_h4
-   124 0000019C 0407                <1>             add al, 'A'-'0'-10   ; 转换为A-F
-   125                              <1>             .digit_h4:
-   126 0000019E 0430                <1>                 add al, '0'          ; 转换为0-9
-   127 000001A0 88C3                <1>                 mov bl, al
-   128 000001A2 E8F8FEFFFF          <1>                 call putc
-   129                              <1>                 ; mov [rdi], al
-   130                              <1>                 ; add rdi,2
-   131 000001A7 4883C720            <1>                 add rdi,32
-   132                              <1> 
-   133                              <1>         .l4:
-   134 000001AB 4831C0              <1>                 xor rax,rax
-   135 000001AE 4831DB              <1>         xor rbx,rbx
-   136 000001B1 8A1E                <1>         mov bl, [rsi]
-   137 000001B3 88D8                <1>             mov al, bl
-   138 000001B5 240F                <1>             and al, 0x0F
-   139 000001B7 3C0A                <1>             cmp al, 10
-   140 000001B9 7C02                <1>             jl .digit_l4
-   141 000001BB 0407                <1>             add al, 'A'-'0'-10   ; 转换为A-F
-   142                              <1>             .digit_l4:
-   143 000001BD 0430                <1>                 add al, '0'          ; 转换为0-9
-   144 000001BF 88C3                <1>                 mov bl, al
-   145 000001C1 E8D9FEFFFF          <1>                 call putc
-   146 000001C6 4883C720            <1>                 add rdi,32
-   147                              <1>                 ; mov [rdi], al
-   148                              <1>                 ; add rdi,2
-   149 000001CA C3                  <1>         ret
-   150                              <1> 
-   151                              <1> 
-   152                              <1> ; draw string
-   153                              <1> ; input: x,y,string
-   154                              <1> draw_string:
-   155                              <1> 
-   156 000001CB B800000000          <1>     mov rax, 0
-   157 000001D0 4C89C8              <1>     mov rax, r9
-   158 000001D3 BB00000000          <1>     mov rbx,0
-   159 000001D8 668B1C25[4A000000]  <1>     mov bx,word [xpixel]
-   160 000001E0 480FAFC3            <1>     imul rax,rbx
-   161 000001E4 4C01C0              <1>     add rax, r8
-   162 000001E7 BB00000000          <1>     mov rbx,0
-   163 000001EC 8A1C25[4E000000]    <1>     mov bl,byte [byte_per_pixel]
-   164 000001F3 480FAFC3            <1>     imul rax,rbx
-   165                              <1>     ; jmp $
-   166 000001F7 48BF000000030080FF- <1>     mov rdi, 0xFFFF800003000000 ; 帧缓冲区起始地址
-   166 00000200 FF                  <1>
-   167 00000201 4801C7              <1>     add rdi, rax
-   168 00000204 B800000000          <1>     mov rax,0
-   169                              <1>     ; jmp $
-   170                              <1>     .next_char:
-   171 00000209 AC                  <1>         lodsb                  
-   172 0000020A 84C0                <1>         test al, al
-   173                              <1>         ; jmp $
-   174 0000020C 7421                <1>         jz .done
-   175 0000020E BB00000000          <1>         mov rbx, 0
-   176 00000213 88C3                <1>         mov bl, al
-   177                              <1> 
-   178 00000215 E885FEFFFF          <1>         call putc  
-   179 0000021A BB00000000          <1>         mov rbx,0
-   180 0000021F 8A1C25[4E000000]    <1>         mov bl,byte [byte_per_pixel]
-   181 00000226 486BDB08            <1>         imul rbx,8        
-   182 0000022A 4801DF              <1>         add rdi, rbx
-   183                              <1>                    
-   184 0000022D EBDA                <1>         jmp .next_char
-   185                              <1>     .done:
-   186 0000022F C3                  <1>     ret
-   187                              <1> 
-   188                              <1> 
-   189                              <1> print_string:
-   190 00000230 4801C7              <1>     add rdi, rax
-   191                              <1>     .str:
-   192 00000233 8A06                <1>         mov al, [rsi]
-   193 00000235 3C00                <1>         cmp al, 0
-   194 00000237 740B                <1>         je .done
-   195 00000239 8807                <1>         mov [rdi], al
-   196 0000023B 4883C702            <1>         add rdi,2
-   197 0000023F 48FFC6              <1>         inc rsi
-   198 00000242 EBEF                <1>         jmp .str
-   199                              <1>     .done:
-   200 00000244 C3                  <1>         ret
-   201                              <1> 
-   202                              <1>     ; call draw_rectangle
-   203 00000245 EBFE                <1>     jmp	$
-    24                                  
-    25 00000247 636F64666A67636700      messages: db 'codfjgcg', 0
-    26 00000250 617364666768696A6B-     messages1: db 'asdfghijklmnopqrstuvwxyz_ASDFGHJKLZXCVBNM1234567890', 0
-    26 00000259 6C6D6E6F7071727374-
-    26 00000262 75767778797A5F4153-
-    26 0000026B 444647484A4B4C5A58-
-    26 00000274 4356424E4D31323334-
-    26 0000027D 35363738393000     
-    27 00000284 00<rep Ah>              messages2: times 10 db 0
+    31 000000E0 F6C280              <1>             test dl, 0x80       ; 测试最高位
+    32 000000E3 7413                <1>             jz .skip_pixel
+    33                              <1> 
+    34                              <1> 
+    35 000000E5 3C04                <1>             cmp al,4
+    36 000000E7 7208                <1>             jb .pixel_2byte
+    37 000000E9 C6470200            <1>             mov byte [rdi+2], 0x00 ; 绘制像素(白色)
+    38 000000ED C64703FF            <1>             mov byte [rdi+3], 0xff ; 绘制像素(白色)
+    39                              <1>             .pixel_2byte:
+    40 000000F1 C607FF              <1>                 mov byte [rdi], 0xff ; 绘制像素(白色)
+    41 000000F4 C6470100            <1>                 mov byte [rdi+1], 0x00 ; 绘制像素(白色)
+    42                              <1>             ; jmp $
+    43                              <1>         .skip_pixel:
+    44 000000F8 D0E2                <1>             shl dl, 1           ; 移到下一位
+    45 000000FA 4801C7              <1>             add rdi,rax
+    46 000000FD FECE                <1>             dec dh
+    47 000000FF 75D5                <1>             jnz .next_pixel
+    48                              <1>         
+    49 00000101 5F                  <1>         pop rdi                 ; 恢复行起始位置
+    50 00000102 4831C0              <1>         xor rax,rax
+    51 00000105 668B0425[52000000]  <1>         mov ax,word [xpixel]
+    52                              <1> 
+    53 0000010D 4989D8              <1>         mov r8,rbx
+    54 00000110 BB00000000          <1>         mov rbx,0
+    55 00000115 8A1C25[56000000]    <1>         mov bl,byte [byte_per_pixel]
+    56 0000011C 480FAFC3            <1>         imul rax,rbx
+    57 00000120 4C89C3              <1>         mov rbx,r8
+    58 00000123 4801C7              <1>         add rdi,rax; 移到下一行(320=屏幕宽度)
+    59                              <1>         ; jmp $
+    60 00000126 48FFC3              <1>         inc rbx                 ; 下一个字模字节
+    61                              <1> 
+    62 00000129 E2A6                <1>         loop .next_line
+    63                              <1>                 ; jmp $
+    64 0000012B 5F                  <1>     pop rdi                 ; 恢复行起始位置
+    65 0000012C C3                  <1>     ret
+    66                              <1> 
+    67                              <1> print:
+    68 0000012D 4883F900            <1>     cmp rcx, 0
+    69 00000131 7421                <1>     je .done
+    70 00000133 53                  <1>     push rbx
+    71 00000134 BBA0000000          <1>     mov rbx,    160
+    72 00000139 48F7E3              <1>     mul rbx
+    73 0000013C 4801C7              <1>     add rdi, rax
+    74 0000013F 5B                  <1>     pop rbx
+    75                              <1>     .str:
+    76 00000140 8A06                <1>         mov al, [rsi]
+    77 00000142 8807                <1>         mov [rdi], al
+    78 00000144 4883C702            <1>         add rdi,2
+    79 00000148 48FFC6              <1>         inc rsi
+    80 0000014B 48FFC9              <1>         dec rcx
+    81 0000014E 4883F900            <1>         cmp rcx, 0
+    82 00000152 75EC                <1>         jne .str
+    83                              <1>     .done:
+    84 00000154 C3                  <1>         ret
+    85                              <1> 
+    86                              <1> print_hex_str:
+    87 00000155 4883F900            <1>     cmp rcx, 0
+    88 00000159 743D                <1>     je .done
+    89                              <1> 
+    90 0000015B 50                  <1>     push rax
+    91 0000015C B880070000          <1>     mov rax,    1920
+    92 00000161 48F7E3              <1>     mul rbx
+    93 00000164 4889C3              <1>     mov rbx,rax
+    94 00000167 58                  <1>     pop rax
+    95 00000168 4801D8              <1>     add rax ,rbx
+    96 0000016B 4889C3              <1>     mov rbx,rax
+    97                              <1> 
+    98 0000016E B804000000          <1>     mov rax,4
+    99 00000173 48F7E3              <1>     mul rbx
+   100 00000176 4801C7              <1>     add rdi, rax
+   101                              <1> 
+   102                              <1>     .str:
+   103 00000179 51                  <1>         push rcx
+   104 0000017A E81A000000          <1>         call print_hex_byte
+   105                              <1> 
+   106 0000017F 48FFC6              <1>         inc rsi
+   107 00000182 E812000000          <1>         call print_hex_byte
+   108                              <1>                 ; jmp $
+   109 00000187 48FFC6              <1>         inc rsi
+   110 0000018A 4883C720            <1>         add rdi,32
+   111 0000018E 59                  <1>         pop rcx
+   112 0000018F 48FFC9              <1>         dec rcx
+   113 00000192 4883F900            <1>         cmp rcx, 0
+   114 00000196 75E1                <1>         jne .str
+   115                              <1>     .done:
+   116 00000198 C3                  <1>         ret
+   117                              <1> print_hex_byte:
+   118 00000199 4831C0              <1>         xor rax,rax
+   119 0000019C 4831DB              <1>         xor rbx,rbx
+   120 0000019F 8A1E                <1>         mov bl, [rsi]
+   121                              <1>         .h4:
+   122 000001A1 88D8                <1>             mov al, bl
+   123 000001A3 C0E804              <1>             shr al, 4
+   124                              <1> 
+   125 000001A6 3C0A                <1>             cmp al, 10
+   126 000001A8 7C02                <1>             jl .digit_h4
+   127 000001AA 0407                <1>             add al, 'A'-'0'-10   ; 转换为A-F
+   128                              <1>             .digit_h4:
+   129 000001AC 0430                <1>                 add al, '0'          ; 转换为0-9
+   130 000001AE 88C3                <1>                 mov bl, al
+   131 000001B0 E8F8FEFFFF          <1>                 call putc
+   132                              <1>                 ; mov [rdi], al
+   133                              <1>                 ; add rdi,2
+   134 000001B5 4883C720            <1>                 add rdi,32
+   135                              <1> 
+   136                              <1>         .l4:
+   137 000001B9 4831C0              <1>                 xor rax,rax
+   138 000001BC 4831DB              <1>         xor rbx,rbx
+   139 000001BF 8A1E                <1>         mov bl, [rsi]
+   140 000001C1 88D8                <1>             mov al, bl
+   141 000001C3 240F                <1>             and al, 0x0F
+   142 000001C5 3C0A                <1>             cmp al, 10
+   143 000001C7 7C02                <1>             jl .digit_l4
+   144 000001C9 0407                <1>             add al, 'A'-'0'-10   ; 转换为A-F
+   145                              <1>             .digit_l4:
+   146 000001CB 0430                <1>                 add al, '0'          ; 转换为0-9
+   147 000001CD 88C3                <1>                 mov bl, al
+   148 000001CF E8D9FEFFFF          <1>                 call putc
+   149 000001D4 4883C720            <1>                 add rdi,32
+   150                              <1>                 ; mov [rdi], al
+   151                              <1>                 ; add rdi,2
+   152 000001D8 C3                  <1>         ret
+   153                              <1> 
+   154                              <1> 
+   155                              <1> ; draw string
+   156                              <1> ; input: x,y,string
+   157                              <1> draw_string:
+   158                              <1> 
+   159 000001D9 B800000000          <1>     mov rax, 0
+   160 000001DE 4C89C8              <1>     mov rax, r9
+   161 000001E1 BB00000000          <1>     mov rbx,0
+   162 000001E6 668B1C25[52000000]  <1>     mov bx,word [xpixel]
+   163 000001EE 480FAFC3            <1>     imul rax,rbx
+   164 000001F2 4C01C0              <1>     add rax, r8
+   165 000001F5 BB00000000          <1>     mov rbx,0
+   166 000001FA 8A1C25[56000000]    <1>     mov bl,byte [byte_per_pixel]
+   167 00000201 480FAFC3            <1>     imul rax,rbx
+   168                              <1>     ; jmp $
+   169 00000205 48BF000000030080FF- <1>     mov rdi, 0xFFFF800003000000 ; 帧缓冲区起始地址
+   169 0000020E FF                  <1>
+   170 0000020F 4801C7              <1>     add rdi, rax
+   171 00000212 B800000000          <1>     mov rax,0
+   172                              <1>     ; jmp $
+   173                              <1>     .next_char:
+   174 00000217 AC                  <1>         lodsb                  
+   175 00000218 84C0                <1>         test al, al
+   176                              <1>         ; jmp $
+   177 0000021A 7421                <1>         jz .done
+   178 0000021C BB00000000          <1>         mov rbx, 0
+   179 00000221 88C3                <1>         mov bl, al
+   180                              <1> 
+   181 00000223 E885FEFFFF          <1>         call putc  
+   182 00000228 BB00000000          <1>         mov rbx,0
+   183 0000022D 8A1C25[56000000]    <1>         mov bl,byte [byte_per_pixel]
+   184 00000234 486BDB08            <1>         imul rbx,8        
+   185 00000238 4801DF              <1>         add rdi, rbx
+   186                              <1>                    
+   187 0000023B EBDA                <1>         jmp .next_char
+   188                              <1>     .done:
+   189 0000023D C3                  <1>     ret
+   190                              <1> 
+   191                              <1> 
+   192                              <1> print_string:
+   193 0000023E 4801C7              <1>     add rdi, rax
+   194                              <1>     .str:
+   195 00000241 8A06                <1>         mov al, [rsi]
+   196 00000243 3C00                <1>         cmp al, 0
+   197 00000245 740B                <1>         je .done
+   198 00000247 8807                <1>         mov [rdi], al
+   199 00000249 4883C702            <1>         add rdi,2
+   200 0000024D 48FFC6              <1>         inc rsi
+   201 00000250 EBEF                <1>         jmp .str
+   202                              <1>     .done:
+   203 00000252 C3                  <1>         ret
+    27                                  
+    28 00000253 636F64666A67636700      messages: db 'codfjgcg', 0
+    29 0000025C 617364666768696A6B-     messages1: db 'asdfghijklmnopqrstuvwxyz_ASDFGHJKLZXCVBNM1234567890', 0
+    29 00000265 6C6D6E6F7071727374-
+    29 0000026E 75767778797A5F4153-
+    29 00000277 444647484A4B4C5A58-
+    29 00000280 4356424E4D31323334-
+    29 00000289 35363738393000     
+    30 00000290 00<rep Ah>              messages2: times 10 db 0
