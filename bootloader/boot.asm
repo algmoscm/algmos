@@ -1,7 +1,5 @@
 [BITS 16]          ; 16位实模式
 [ORG 0x7C00]       ; BIOS 加载引导扇区到 0x7C00
-
-
 start:
     cli                 ; 禁用中断
     xor ax, ax          ; 清零 ax

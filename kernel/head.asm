@@ -1,17 +1,19 @@
-; org	0xFFFF800000100000
-[BITS 64]          ; 16位实模式
-[ORG 0x100000]       ; BIOS 加载引导扇区到 0x7C00
-
-
+%include "../bootloader/global_def.asm"
+%include "../kernel/stddef.asm"
+[BITS 64]
+[ORG 0x100000]       ; BIOS 加载引导扇区到 0x100000
+ehdr:
+    ABI_HEADER ABI_File_CORE, head_start, shdr,1
+shdr:
+    SECTION_HEADER Section_Type_LOAD, 0, head_start,section_end-section_start
+section_start:
 head_start:
-
     mov ax,0x10
 	mov	ds,	ax
     mov	es,	ax
     mov	fs,	ax
     mov	ss,	ax
     mov	esp,0x7E00
-
 
     lgdt	[GDT_POINTER]
 	lidt	[IDT_POINTER]
@@ -38,6 +40,7 @@ head_entry_msg db "jump to head entry success!", 0
 
 ;-------------从线性地址0x100000向地址0xFFFF 8000 0010 0000切换的工作---------------
 head_kernel:
+
     mov ax,0x10
 	mov	ds,	ax
     mov	es,	ax
@@ -45,22 +48,144 @@ head_kernel:
     mov	ss,	ax
     mov	rsp,0xffff800000007E00
 
-    mov rax, 0xFFFF800000106200 ; 帧缓冲区起始地址
-    jmp	rax
+	; mov rax,0
 
-times 0x1000-($-head_start) db 0
+	; mov rbx,[rax+struct_ABI_HEADER.entry_point]
+	; add rax,rbx
+    ; jmp	rax
+	mov rdx,0
+	mov rax,section_end-section_start+64
+		; jmp $
+	mov rcx,512
+	div rcx
+
+	; jmp $
+	add rax,KernelStartSectorNum
+	lea rdi,[rel head_end]
+	; mov eax, KernelStartSectorNum
+	mov rbx, rdi                                 ;起始地址
+	; jmp $
+	call read_hard_disk_0                        ;以下读取程序的起始部分（一个扇区）
+
+	;以下判断整个程序有多大
+	push rdi
+	mov rax, [rdi+struct_ABI_HEADER.section_offset]                               ;核心程序尺寸
+	add rax,struct_SECTION_HEADER.size
+	add rdi,rax
+	mov rax,[rdi]
+	; jmp $
+	add rax,64
+	pop rdi
+	xor rdx, rdx
+	mov rcx, 512                                 ;512字节每扇区
+	div rcx
+; jmp $
+	or rdx, rdx
+	jnz @1                                       ;未除尽，因此结果比实际扇区数少1
+	dec rax                                      ;已经读了一个扇区，扇区总数减1
+@1:
+	or rax, rax                                  ;考虑实际长度≤512个字节的情况
+	jz pge                                       ;EAX=0 ?
+
+	;读取剩余的扇区
+	mov rcx, rax                                 ;32位模式下的LOOP使用ECX
+	; jmp $
+	push rcx
+		mov rdx,0
+	mov rax,section_end-section_start+64
+		; jmp $
+	mov rcx,512
+	div rcx
+	pop rcx
+	add rax, KernelStartSectorNum
+	inc rax                                      ;从下一个逻辑扇区接着读
+	
+@2:
+	call read_hard_disk_0
+	inc rax
+	loop @2                                      ;循环读，直到读完整个内核
+
+pge:
+;  ;回填内核加载的位置信息（物理/线性地址）到内核程序头部
+;  mov dword [CORE_PHY_ADDR + 0x08], CORE_PHY_ADDR
+;  mov dword [CORE_PHY_ADDR + 0x0c], 0
+
+
+	mov rax,0x100000
+	lea rax,[rel head_end]
+	mov rbx,[rax+8]
+	add rbx,rax
+	; jmp $
+	jmp	rbx
+
+read_hard_disk_0:                                     ;从硬盘读取一个逻辑扇区
+                                                      ;EAX=逻辑扇区号
+                                                      ;EBX=目标缓冲区地址
+                                                      ;返回：EBX=EBX+512
+         push rax
+         push rcx
+         push rdx
+
+         push rax
+
+         mov dx, 0x1f2
+         mov al, 1
+         out dx, al                                   ;读取的扇区数
+
+         inc dx                                       ;0x1f3
+         pop rax
+         out dx, al                                   ;LBA地址7~0
+
+         inc dx                                       ;0x1f4
+         mov cl, 8
+         shr eax, cl
+         out dx, al                                   ;LBA地址15~8
+
+         inc dx                                       ;0x1f5
+         shr eax, cl
+         out dx, al                                   ;LBA地址23~16
+
+         inc dx                                       ;0x1f6
+         shr eax, cl
+         or al, 0xe0                                  ;第一硬盘  LBA地址27~24
+         out dx, al
+
+         inc dx
+                                                      ;0x1f7
+         mov al, 0x20                                 ;读命令
+         out dx, al
+
+  .waits:
+         in al, dx
+         test al, 8
+         jz .waits                                   ;不忙，且硬盘已准备好数据传输
+
+         mov ecx, 256                                 ;总共要读取的字数
+         mov dx, 0x1f0
+  .readw:
+         in ax, dx
+         mov [rbx], ax
+         add rbx, 2
+         loop .readw
+
+         pop rdx
+         pop rcx
+         pop rax
+
+         ret
+ttt:
+
+times 0x1000-($-ehdr) db 0
 
 ;---------------------init page-----------;
-align 8	
-; [ORG  0xFFFF800000101000]
-PML4E:
+align 8
+Page_Start:
+PML4E:; [ORG  0xFFFF800000101000]
 	dq	0x102007		;0索引,索引出来后低12位补0
     dq  255 dup(0x0000000000000000)
 	dq	0x102007		;256索引,比如线性地址0xFFFF 8000 0010 0000(低21位是2MB物理页的页内偏移)映射到的物理地址是0x10 0000
 	dq  255 dup(0x0000000000000000)
-
-; [ORG  0xFFFF800000102000]	;21~29位索引PDT,0~20位为2MB物理页的页内偏移
-PDPTE:	;4KB
+PDPTE:	;4KB; [ORG  0xFFFF800000102000]	;21~29位索引PDT,0~20位为2MB物理页的页内偏移
 	
 	dq	0x103003		;/* 0x103003 */
 	dq  511 dup(0x0000000000000000)
@@ -114,7 +239,7 @@ PDE:		;4KB
 	dq	0xfd000083		;/*0x 300 0000*/ 115 mode vbe qemu 800*600
 	dq	0xfd200083
 	dq	0xfd400083
-	dq	0xfd600083		;/*0x1000000*/;作者说注释放错行了,本来在下一行,修改到这一行
+	dq	0xfd600083
 	dq	0xfd800083
 	dq	0xfda00083
 	dq	0xfdc00083
@@ -494,5 +619,6 @@ font_start:
 	db 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00;
 	db 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00;
 	db 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00;
-
+head_end:
+section_end:
 ; times 42*512-($-$$) db 0

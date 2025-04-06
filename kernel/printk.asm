@@ -1,11 +1,39 @@
-[BITS 64]
+%ifndef PRINTK_ASM
+%define PRINTK_ASM
+
+%include "../bootloader/global_def.asm"
 %include "../kernel/video.asm"
+    
+[BITS 64]
+struc cursor_info
+    .print_xpixel:            resw 1      
+    .print_ypixel:            resw 1       
+    .current_xpixel:          resw 1      
+    .current_ypixel:          resw 1
+endstruc
+cursor_data:
+    istruc cursor_info
+        at cursor_info.print_xpixel, dw 0
+        at cursor_info.print_ypixel, dw 0
+        at cursor_info.current_xpixel, dw 0
+        at cursor_info.current_ypixel, dw 0
+    iend
+struc font_info
+    .font_base_address:    resq 1
+    .font_size:            resq 1
+    .font_width:           resq 1
+    .font_height:          resq 1
+endstruc
+
+
 
 printk_init:
     ret
-; put char
-; input: rbx=char,rdi=vga_address
-putc: ; draw a character
+
+printk:
+
+    ret
+putc: ; input: rbx=char,rdi=vga_address ;draw a character
     xor rax, rax
     mov al, bl
     shl rax, 4                 ; 乘以16(每个字符16字节)
@@ -26,7 +54,7 @@ putc: ; draw a character
         mov dh, 8              ; 8位/行
         .next_pixel:
             xor rax,rax
-            mov al,byte [byte_per_pixel]
+            mov al,byte [video_info.byte_per_pixel]
 
             test dl, 0x80       ; 测试最高位
             jz .skip_pixel
@@ -48,11 +76,11 @@ putc: ; draw a character
         
         pop rdi                 ; 恢复行起始位置
         xor rax,rax
-        mov ax,word [xpixel]
+        mov ax,word [video_info.xpixel]
 
         mov r8,rbx
         mov rbx,0
-        mov bl,byte [byte_per_pixel]
+        mov bl,byte [video_info.byte_per_pixel]
         imul rax,rbx
         mov rbx,r8
         add rdi,rax; 移到下一行(320=屏幕宽度)
@@ -152,18 +180,18 @@ print_hex_byte:
         ret
 
 
-; draw string
-; input: x,y,string
-draw_string:
+
+
+draw_string:; input: x,y,string; draw string
 
     mov rax, 0
     mov rax, r9
     mov rbx,0
-    mov bx,word [xpixel]
+    mov bx,word [video_info.xpixel]
     imul rax,rbx
     add rax, r8
     mov rbx,0
-    mov bl,byte [byte_per_pixel]
+    mov bl,byte [video_info.byte_per_pixel]
     imul rax,rbx
     ; jmp $
     mov rdi, 0xFFFF800003000000 ; 帧缓冲区起始地址
@@ -180,10 +208,10 @@ draw_string:
 
         call putc  
         mov rbx,0
-        mov bl,byte [byte_per_pixel]
+        mov bl,byte [video_info.byte_per_pixel]
         imul rbx,8        
         add rdi, rbx
-                   
+                
         jmp .next_char
     .done:
     ret
@@ -201,3 +229,5 @@ print_string:
         jmp .str
     .done:
         ret
+
+%endif

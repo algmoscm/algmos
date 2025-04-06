@@ -1,3 +1,7 @@
+%ifndef GLOBAL_DEF_ASM
+%define GLOBAL_DEF_ASM
+
+
 ;|----------------------|
 ;|	100000 ~ END	|
 ;|	   KERNEL	|
@@ -32,12 +36,6 @@
 ;|	0000 ~ 7c00	|
 ;|	 BIOS Code	|
 ;|----------------------|
-
-
-
-
-
-
 
 
 ;_______________________________________________________
@@ -135,4 +133,93 @@ OffsetOfKernelFile	equ	0x100000
 BaseTmpOfKernelAddr	equ	0x9000
 OffsetTmpOfKernelFile	equ	0x0000
 VBEStructBufferAddr	equ	0x8000
+VBEModeStructBufferAddr	equ	0x8200
 MemoryStructBufferAddr	equ	0x8800
+KernelSpaceUpperAddress equ 0xFFFF800000000000
+VideoFrameBufferAddress equ 0xFFFF800003000000
+KernelStartSectorNum	equ	16
+
+
+struc vbe_info_block
+    .signature                 resb 4    ; 'VESA' signature (must be "VESA")
+    .version                   resw 1    ; VBE version (e.g., 0x0300 for VBE 3.0)
+    .oem_string_ptr            resd 1    ; Pointer to OEM string
+    .capabilities              resd 1    ; Capabilities of the video card
+    .video_mode_ptr            resd 1    ; Pointer to supported video modes
+    .total_memory              resw 1    ; Total memory in 64KB blocks
+
+    ; VBE 2.0+ fields
+    .oem_software_rev          resw 1    ; OEM software revision
+    .oem_vendor_name_ptr       resd 1    ; Pointer to OEM vendor name string
+    .oem_product_name_ptr      resd 1    ; Pointer to OEM product name string
+    .oem_product_rev_ptr       resd 1    ; Pointer to OEM product revision string
+    .reserved                  resb 222  ; Reserved for VBE implementation
+    .oem_data                  resb 256  ; Data area for OEM-specific information
+endstruc
+
+struc vbe_mode_info_block
+    .attributes                resw 1    ; Mode attributes
+    .winA_attributes           resb 1    ; Window A attributes
+    .winB_attributes           resb 1    ; Window B attributes
+    .win_granularity           resw 1    ; Window granularity in KB
+    .win_size                  resw 1    ; Window size in KB
+    .winA_segment              resw 1    ; Window A segment
+    .winB_segment              resw 1    ; Window B segment
+    .win_func_ptr              resd 1    ; Pointer to window function
+    .bytes_per_scanline        resw 1    ; Bytes per scanline
+
+    ; VBE 1.2+ fields
+    .x_resolution              resw 1    ; Horizontal resolution in pixels
+    .y_resolution              resw 1    ; Vertical resolution in pixels
+    .x_char_size               resb 1    ; Character cell width in pixels
+    .y_char_size               resb 1    ; Character cell height in pixels
+    .number_of_planes          resb 1    ; Number of memory planes
+    .bits_per_pixel            resb 1    ; Bits per pixel
+    .number_of_banks           resb 1    ; Number of banks
+    .memory_model              resb 1    ; Memory model type
+    .bank_size                 resb 1    ; Bank size in KB
+    .number_of_image_pages     resb 1    ; Number of images
+    .reserved1                 resb 1    ; Reserved
+
+    ; Direct Color fields (VBE 1.2+)
+    .red_mask_size             resb 1    ; Size of direct color red mask
+    .red_field_position        resb 1    ; Bit position of red mask
+    .green_mask_size           resb 1    ; Size of direct color green mask
+    .green_field_position      resb 1    ; Bit position of green mask
+    .blue_mask_size            resb 1    ; Size of direct color blue mask
+    .blue_field_position       resb 1    ; Bit position of blue mask
+    .reserved_mask_size        resb 1    ; Size of direct color reserved mask
+    .reserved_field_position   resb 1    ; Bit position of reserved mask
+    .direct_color_mode_info    resb 1    ; Direct color mode attributes
+
+    ; VBE 2.0+ fields
+    .phys_base_ptr             resd 1    ; Physical address for flat memory frame buffer
+    .reserved2                 resd 1    ; Reserved
+    .reserved3                 resw 1    ; Reserved
+
+    ; VBE 3.0+ fields
+    .lin_bytes_per_scanline    resw 1    ; Bytes per scanline for linear modes
+    .bnk_number_of_image_pages resb 1    ; Number of images for banked modes
+    .lin_number_of_image_pages resb 1    ; Number of images for linear modes
+    .lin_red_mask_size         resb 1    ; Size of direct color red mask (linear modes)
+    .lin_red_field_position    resb 1    ; Bit position of red mask (linear modes)
+    .lin_green_mask_size       resb 1    ; Size of direct color green mask (linear modes)
+    .lin_green_field_position  resb 1    ; Bit position of green mask (linear modes)
+    .lin_blue_mask_size        resb 1    ; Size of direct color blue mask (linear modes)
+    .lin_blue_field_position   resb 1    ; Bit position of blue mask (linear modes)
+    .lin_reserved_mask_size    resb 1    ; Size of direct color reserved mask (linear modes)
+    .lin_reserved_field_position resb 1  ; Bit position of reserved mask (linear modes)
+    .max_pixel_clock           resd 1    ; Maximum pixel clock (Hz)
+    .reserved4                 resb 190  ; Reserved for future expansion
+endstruc
+
+struc e820_memory_entry
+    .base_addr_low            resd 1    ; Lower 32 bits of the base address
+    .base_addr_high           resd 1    ; Upper 32 bits of the base address
+    .length_low               resd 1    ; Lower 32 bits of the length
+    .length_high              resd 1    ; Upper 32 bits of the length
+    .type                     resd 1    ; Memory type (1 = usable, others = reserved, etc.)
+    ; .acpi_attributes          resd 1    ; ACPI 3.0+ attributes (optional, may be zero)
+endstruc
+
+%endif
