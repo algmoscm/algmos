@@ -1,0 +1,1922 @@
+     1                                  %include "../bootloader/global_def.asm"
+     1                              <1> %ifndef GLOBAL_DEF_ASM
+     2                              <1> %define GLOBAL_DEF_ASM
+     3                              <1> 
+     4                              <1> 
+     5                              <1> ;|----------------------|
+     6                              <1> ;|	100000 ~ END	|
+     7                              <1> ;|	   KERNEL	|
+     8                              <1> ;|----------------------|
+     9                              <1> ;|	E0000 ~ 100000	|
+    10                              <1> ;| Extended System BIOS |
+    11                              <1> ;|----------------------|
+    12                              <1> ;|	C0000 ~ Dffff	|
+    13                              <1> ;|     Expansion Area   |
+    14                              <1> ;|----------------------|
+    15                              <1> ;|	A0000 ~ bffff	|
+    16                              <1> ;|   Legacy Video Area  |
+    17                              <1> ;|----------------------|
+    18                              <1> ;|	9f000 ~ A0000	|
+    19                              <1> ;|	 BIOS reserve	|
+    20                              <1> ;|----------------------|
+    21                              <1> ;|	90000 ~ 9f000	|
+    22                              <1> ;|	 kernel tmpbuf	|
+    23                              <1> ;|----------------------|
+    24                              <1> ;|	10000 ~ 90000	|
+    25                              <1> ;|	   LOADER	|
+    26                              <1> ;|----------------------|
+    27                              <1> ;|	8000 ~ 10000	|
+    28                              <1> ;|	  VBE info	|
+    29                              <1> ;|----------------------|
+    30                              <1> ;|	7e00 ~ 8000	|
+    31                              <1> ;|	  mem info	|
+    32                              <1> ;|----------------------|
+    33                              <1> ;|	7c00 ~ 7e00	|
+    34                              <1> ;|	 MBR (BOOT)	|
+    35                              <1> ;|----------------------|
+    36                              <1> ;|	0000 ~ 7c00	|
+    37                              <1> ;|	 BIOS Code	|
+    38                              <1> ;|----------------------|
+    39                              <1> 
+    40                              <1> 
+    41                              <1> ;_______________________________________________________
+    42                              <1> ; START	END	    SIZE	        USED
+    43                              <1> ; FFFF0	FFFFF	16B	        BIOS System Entry
+    44                              <1> ; F0000	FFFEF	64KB-16B	BIOS System Code
+    45                              <1> ; C8000	EFFFF	160KB	    ROM/Mapped IO
+    46                              <1> ; C0000	C7FFF	32KB	    Graphic Adapter BIOS
+    47                              <1> ; B8000	BFFFF	32KB	    Chroma Text Video Buffer
+    48                              <1> ; B0000	B7FFF	32KB	    Mono Text Video Buffer
+    49                              <1> ; A0000	AFFFF	64KB	    Graphic Video Buffer
+    50                              <1> ; 9FC00	9FFFF	1KB	        Extended BIOS Data Area
+    51                              <1> ; 7E00	9FBFF	622080B     Useable 608KB	
+    52                              <1> ; 7C00	7DFF	512B	    MBR
+    53                              <1> ; 500	7BFF	30464B      Useable 30KB	
+    54                              <1> ; 400	4FF	    256B	    BIOS Data Area
+    55                              <1> ; 000	3FF	    1KB	        IVT
+    56                              <1> ; _____________________________________________________
+    57                              <1> 
+    58                              <1> 
+    59                              <1> 
+    60                              <1> 
+    61                              <1> 
+    62                              <1> 
+    63                              <1> 
+    64                              <1> 
+    65                              <1> 
+    66                              <1> 
+    67                              <1> 
+    68                              <1> ;|----------------------|
+    69                              <1> ;|	100000 ~ END	|
+    70                              <1> ;|	   KERNEL	|
+    71                              <1> ;|----------------------|
+    72                              <1> ;|	E0000 ~ 100000	|
+    73                              <1> ;| Extended System BIOS |
+    74                              <1> ;|----------------------|
+    75                              <1> ;|	C0000 ~ Dffff	|
+    76                              <1> ;|     Expansion Area   |
+    77                              <1> ;|----------------------|
+    78                              <1> ;|	A0000 ~ bffff	|
+    79                              <1> ;|   Legacy Video Area  |
+    80                              <1> ;|----------------------|
+    81                              <1> ;|	9F000 ~ A0000	|
+    82                              <1> ;|	 BIOS reserve	|
+    83                              <1> ;|----------------------|
+    84                              <1> ;|	90000 ~ 9F000	|
+    85                              <1> ;|	 kernel tmpbuf	|
+    86                              <1> ;|----------------------|
+    87                              <1> ;|	10000 ~ 90000	|
+    88                              <1> ;|	   LOADER	|
+    89                              <1> ;|----------------------|
+    90                              <1> ;|	8000 ~ 10000	|
+    91                              <1> ;|	  VBE info	|
+    92                              <1> ;|----------------------|
+    93                              <1> ;|	7E00 ~ 8000	|
+    94                              <1> ;|	  mem info	|
+    95                              <1> ;|----------------------|
+    96                              <1> ;|	7C00 ~ 7E00	|
+    97                              <1> ;|	 MBR (BOOT)	|
+    98                              <1> ;|----------------------|
+    99                              <1> ;|	0000 ~ 7C00	|
+   100                              <1> ;|	 BIOS Code	|
+   101                              <1> ;|----------------------|
+   102                              <1> 
+   103                              <1> 
+   104                              <1> 
+   105                              <1> 
+   106                              <1> 
+   107                              <1> 
+   108                              <1> 
+   109                              <1> 
+   110                              <1> 
+   111                              <1> 
+   112                              <1> ;______________________________________________
+   113                              <1> ; ----------------Vbe Info Block------------
+   114                              <1> ; typedef struct {
+   115                              <1> ;     unsigned char       vbe_signature;
+   116                              <1> ;     unsigned short      vbe_version;
+   117                              <1> ;     unsigned long       oem_string_ptr;
+   118                              <1> ;     unsigned char       capabilities;
+   119                              <1> ;     unsigned long       video_mode_ptr;
+   120                              <1> ;     unsigned short      total_memory;
+   121                              <1> ;     unsigned short      oem_software_rev;
+   122                              <1> ;     unsigned long       oem_vendor_name_ptr;
+   123                              <1> ;     unsigned long       oem_product_name_ptr;
+   124                              <1> ;     unsigned long       oem_product_rev_ptr;
+   125                              <1> ;     unsigned char       reserved[222];
+   126                              <1> ;     unsigned char       oem_data[256];  
+   127                              <1> ; } VbeInfoBlock;
+   128                              <1> ;______________________________________________
+   129                              <1> 
+   130                              <1> 
+   131                              <1> BaseOfKernelFile	equ	0x00
+   132                              <1> OffsetOfKernelFile	equ	0x100000
+   133                              <1> BaseTmpOfKernelAddr	equ	0x9000
+   134                              <1> OffsetTmpOfKernelFile	equ	0x0000
+   135                              <1> VBEStructBufferAddr	equ	0x8000
+   136                              <1> VBEModeStructBufferAddr	equ	0x8200
+   137                              <1> MemoryStructBufferAddr	equ	0x8800
+   138                              <1> KernelSpaceUpperAddress equ 0xFFFF800000000000
+   139                              <1> VideoFrameBufferAddress equ 0xFFFF800003000000
+   140                              <1> KernelStartSectorNum	equ	16
+   141                              <1> 
+   142                              <1> 
+   143                              <1> %define PLATFORM_QEMU_X64 1
+   144                              <1> %define PLATFORM_X64 2
+   145                              <1> 
+   146                              <1> %define DEBUG_PLATFORM PLATFORM_QEMU_X64
+   147                              <1> %define DEBUG_MODE 1
+   148                              <1> 
+   149                              <1> 
+   150                              <1> MasterSectorReadNumPort    equ	0x1F2
+   151                              <1> MasterSectorReadPort    equ	0x1F0
+   152                              <1> 
+   153                              <1> SlaveReadNumPort    equ	0x172
+   154                              <1> SlaveSectorReadPort    equ	0x170
+   155                              <1> 
+   156                              <1> SectorReadNumPort    equ	MasterSectorReadNumPort
+   157                              <1> SectorReadPort    equ	MasterSectorReadPort
+   158                              <1> 
+   159                              <1> struc vbe_info_block
+   160 00000000 ????????            <1>     .signature                 resb 4    ; 'VESA' signature (must be "VESA")
+   161 00000004 ????                <1>     .version                   resw 1    ; VBE version (e.g., 0x0300 for VBE 3.0)
+   162 00000006 ????????            <1>     .oem_string_ptr            resd 1    ; Pointer to OEM string
+   163 0000000A ????????            <1>     .capabilities              resd 1    ; Capabilities of the video card
+   164 0000000E ????????            <1>     .video_mode_ptr            resd 1    ; Pointer to supported video modes
+   165 00000012 ????                <1>     .total_memory              resw 1    ; Total memory in 64KB blocks
+   166                              <1> 
+   167                              <1>     ; VBE 2.0+ fields
+   168 00000014 ????                <1>     .oem_software_rev          resw 1    ; OEM software revision
+   169 00000016 ????????            <1>     .oem_vendor_name_ptr       resd 1    ; Pointer to OEM vendor name string
+   170 0000001A ????????            <1>     .oem_product_name_ptr      resd 1    ; Pointer to OEM product name string
+   171 0000001E ????????            <1>     .oem_product_rev_ptr       resd 1    ; Pointer to OEM product revision string
+   172 00000022 <res DEh>           <1>     .reserved                  resb 222  ; Reserved for VBE implementation
+   173 00000100 <res 100h>          <1>     .oem_data                  resb 256  ; Data area for OEM-specific information
+   174                              <1> endstruc
+   175                              <1> 
+   176                              <1> struc vbe_mode_info_block
+   177 00000000 ????                <1>     .attributes                resw 1    ; Mode attributes
+   178 00000002 ??                  <1>     .winA_attributes           resb 1    ; Window A attributes
+   179 00000003 ??                  <1>     .winB_attributes           resb 1    ; Window B attributes
+   180 00000004 ????                <1>     .win_granularity           resw 1    ; Window granularity in KB
+   181 00000006 ????                <1>     .win_size                  resw 1    ; Window size in KB
+   182 00000008 ????                <1>     .winA_segment              resw 1    ; Window A segment
+   183 0000000A ????                <1>     .winB_segment              resw 1    ; Window B segment
+   184 0000000C ????????            <1>     .win_func_ptr              resd 1    ; Pointer to window function
+   185 00000010 ????                <1>     .bytes_per_scanline        resw 1    ; Bytes per scanline
+   186                              <1> 
+   187                              <1>     ; VBE 1.2+ fields
+   188 00000012 ????                <1>     .x_resolution              resw 1    ; Horizontal resolution in pixels
+   189 00000014 ????                <1>     .y_resolution              resw 1    ; Vertical resolution in pixels
+   190 00000016 ??                  <1>     .x_char_size               resb 1    ; Character cell width in pixels
+   191 00000017 ??                  <1>     .y_char_size               resb 1    ; Character cell height in pixels
+   192 00000018 ??                  <1>     .number_of_planes          resb 1    ; Number of memory planes
+   193 00000019 ??                  <1>     .bits_per_pixel            resb 1    ; Bits per pixel
+   194 0000001A ??                  <1>     .number_of_banks           resb 1    ; Number of banks
+   195 0000001B ??                  <1>     .memory_model              resb 1    ; Memory model type
+   196 0000001C ??                  <1>     .bank_size                 resb 1    ; Bank size in KB
+   197 0000001D ??                  <1>     .number_of_image_pages     resb 1    ; Number of images
+   198 0000001E ??                  <1>     .reserved1                 resb 1    ; Reserved
+   199                              <1> 
+   200                              <1>     ; Direct Color fields (VBE 1.2+)
+   201 0000001F ??                  <1>     .red_mask_size             resb 1    ; Size of direct color red mask
+   202 00000020 ??                  <1>     .red_field_position        resb 1    ; Bit position of red mask
+   203 00000021 ??                  <1>     .green_mask_size           resb 1    ; Size of direct color green mask
+   204 00000022 ??                  <1>     .green_field_position      resb 1    ; Bit position of green mask
+   205 00000023 ??                  <1>     .blue_mask_size            resb 1    ; Size of direct color blue mask
+   206 00000024 ??                  <1>     .blue_field_position       resb 1    ; Bit position of blue mask
+   207 00000025 ??                  <1>     .reserved_mask_size        resb 1    ; Size of direct color reserved mask
+   208 00000026 ??                  <1>     .reserved_field_position   resb 1    ; Bit position of reserved mask
+   209 00000027 ??                  <1>     .direct_color_mode_info    resb 1    ; Direct color mode attributes
+   210                              <1> 
+   211                              <1>     ; VBE 2.0+ fields
+   212 00000028 ????????            <1>     .phys_base_ptr             resd 1    ; Physical address for flat memory frame buffer
+   213 0000002C ????????            <1>     .reserved2                 resd 1    ; Reserved
+   214 00000030 ????                <1>     .reserved3                 resw 1    ; Reserved
+   215                              <1> 
+   216                              <1>     ; VBE 3.0+ fields
+   217 00000032 ????                <1>     .lin_bytes_per_scanline    resw 1    ; Bytes per scanline for linear modes
+   218 00000034 ??                  <1>     .bnk_number_of_image_pages resb 1    ; Number of images for banked modes
+   219 00000035 ??                  <1>     .lin_number_of_image_pages resb 1    ; Number of images for linear modes
+   220 00000036 ??                  <1>     .lin_red_mask_size         resb 1    ; Size of direct color red mask (linear modes)
+   221 00000037 ??                  <1>     .lin_red_field_position    resb 1    ; Bit position of red mask (linear modes)
+   222 00000038 ??                  <1>     .lin_green_mask_size       resb 1    ; Size of direct color green mask (linear modes)
+   223 00000039 ??                  <1>     .lin_green_field_position  resb 1    ; Bit position of green mask (linear modes)
+   224 0000003A ??                  <1>     .lin_blue_mask_size        resb 1    ; Size of direct color blue mask (linear modes)
+   225 0000003B ??                  <1>     .lin_blue_field_position   resb 1    ; Bit position of blue mask (linear modes)
+   226 0000003C ??                  <1>     .lin_reserved_mask_size    resb 1    ; Size of direct color reserved mask (linear modes)
+   227 0000003D ??                  <1>     .lin_reserved_field_position resb 1  ; Bit position of reserved mask (linear modes)
+   228 0000003E ????????            <1>     .max_pixel_clock           resd 1    ; Maximum pixel clock (Hz)
+   229 00000042 <res BEh>           <1>     .reserved4                 resb 190  ; Reserved for future expansion
+   230                              <1> endstruc
+   231                              <1> 
+   232                              <1> struc e820_memory_entry
+   233 00000000 ????????            <1>     .base_addr_low            resd 1    ; Lower 32 bits of the base address
+   234 00000004 ????????            <1>     .base_addr_high           resd 1    ; Upper 32 bits of the base address
+   235 00000008 ????????            <1>     .length_low               resd 1    ; Lower 32 bits of the length
+   236 0000000C ????????            <1>     .length_high              resd 1    ; Upper 32 bits of the length
+   237 00000010 ????????            <1>     .type                     resd 1    ; Memory type (1 = usable, others = reserved, etc.)
+   238                              <1>     ; .acpi_attributes          resd 1    ; ACPI 3.0+ attributes (optional, may be zero)
+   239                              <1> endstruc
+   240                              <1> 
+   241                              <1> %endif
+     2                                  %include "../kernel/stddef.asm"
+     1                              <1> %ifndef STDDEF_ASM
+     2                              <1> %define STDDEF_ASM
+     3                              <1> 
+     4                              <1> ;-----------Calling Conventions Standard------------;
+     5                              <1> %define USE_CC_STANDARD
+     6                              <1> %ifdef USE_CC_STANDARD
+     7                              <1> ;caller maintain the stack balance 
+     8                              <1> 
+     9                              <1> 
+    10                              <1> ; -------------------------------
+    11                              <1> ; 栈帧结构定义
+    12                              <1> ; -------------------------------
+    13                              <1> ; 调用后的栈布局:
+    14                              <1> ; [rsp+0x00] 返回地址 (8字节)
+    15                              <1> ; [rsp+0x08] 旧RBP     (8字节) <- rbp指向这里
+    16                              <1> ; [rsp+0x10] 参数1     (8字节)
+    17                              <1> ; [rsp+0x18] 参数2
+    18                              <1> ; ...
+    19                              <1> ; [rsp+X]    局部变量区
+    20                              <1> ; -------------------------------
+    21                              <1> 
+    22                              <1> %define PARAM_OFFSET   16      ; 第一个参数的偏移量(返回地址8 + 旧RBP8)
+    23                              <1> %macro prolog 1;local var size(bytes)
+    24                              <1>     push rbp
+    25                              <1>     mov rbp, rsp
+    26                              <1> 
+    27                              <1>     mov rax, %1
+    28                              <1>     add rax, 15
+    29                              <1>     and rax, ~15
+    30                              <1>     sub rsp, rax
+    31                              <1> 
+    32                              <1>     push r15
+    33                              <1>     push r14
+    34                              <1>     push r13
+    35                              <1>     push r12
+    36                              <1>     push r11
+    37                              <1>     push r10
+    38                              <1>     push r9
+    39                              <1>     push r8
+    40                              <1>     push rdi
+    41                              <1>     push rsi
+    42                              <1>     push rdx
+    43                              <1>     push rcx
+    44                              <1>     push rbx
+    45                              <1>     push rax
+    46                              <1>     
+    47                              <1>     ; 调试信息可以放在这里
+    48                              <1>     ; %ifdef DEBUG
+    49                              <1>     ;     mov [rbp-8], rdi    ; 保存第一个参数用于调试
+    50                              <1>     ; %endif
+    51                              <1> %endmacro
+    52                              <1> 
+    53                              <1> %macro epilog 0
+    54                              <1>     pop rax
+    55                              <1>     pop rbx
+    56                              <1>     pop rcx
+    57                              <1>     pop rdx
+    58                              <1>     pop rsi
+    59                              <1>     pop rdi
+    60                              <1>     pop r8
+    61                              <1>     pop r9
+    62                              <1>     pop r10
+    63                              <1>     pop r11
+    64                              <1>     pop r12
+    65                              <1>     pop r13
+    66                              <1>     pop r14
+    67                              <1>     pop r15
+    68                              <1> 
+    69                              <1>     mov rsp, rbp
+    70                              <1>     pop rbp
+    71                              <1>     ret
+    72                              <1> %endmacro
+    73                              <1> 
+    74                              <1> %macro get_param 2;1=register, 2=param index(from 1)
+    75                              <1>     mov %1, [rbp + PARAM_OFFSET + 8*(%2-1)]
+    76                              <1> %endmacro
+    77                              <1> 
+    78                              <1> %macro set_ret_param 2;1=register, 2=param index(from 1)
+    79                              <1>     mov [rbp + PARAM_OFFSET + 8*(%2-1)], %1
+    80                              <1> %endmacro
+    81                              <1> 
+    82                              <1> %macro prepare_call 2;1=param count, 2=return param count
+    83                              <1>     %assign total_space ((%1 + %2) * 8)
+    84                              <1>     
+    85                              <1>     %if (total_space % 16) != 0
+    86                              <1>         %assign total_space total_space + 8  ; 添加填充
+    87                              <1>     %endif
+    88                              <1>     
+    89                              <1>     sub rsp, total_space
+    90                              <1> %endmacro
+    91                              <1> 
+    92                              <1> %macro cleanup_call 2;1=param count, 2=return param count
+    93                              <1>     %assign total_space ((%1 + %2) * 8)
+    94                              <1>     %if (total_space % 16) != 0
+    95                              <1>         %assign total_space total_space + 8
+    96                              <1>     %endif
+    97                              <1>     add rsp, total_space
+    98                              <1> %endmacro
+    99                              <1> 
+   100                              <1> 
+   101                              <1> ; %macro function 1-*;1=function entry offset
+   102                              <1> ;     prepare_call %0-2,1
+   103                              <1> 
+   104                              <1> ;     %assign i %0
+   105                              <1> ;     %rep i-1
+   106                              <1> ;         %rotate -1
+   107                              <1> ;         push %1
+   108                              <1> ;     %endrep
+   109                              <1> ;     call %1
+   110                              <1> 
+   111                              <1> ;     cleanup_call %0-2,1
+   112                              <1> ;     ; mov rax,[rsp-8]
+   113                              <1> ; %endmacro
+   114                              <1> 
+   115                              <1> %endif
+   116                              <1> ;---------------------ABI Standard------------------;
+   117                              <1> %define USE_ABI_STANDARD
+   118                              <1> %ifdef USE_ABI_STANDARD
+   119                              <1> 
+   120                              <1> 
+   121                              <1>     %define ABI_File_None   0       ; 无文件类型
+   122                              <1>     %define ABI_File_REL    1       ; 可重定位文件
+   123                              <1>     %define ABI_File_EXEC   2       ; 可执行文件
+   124                              <1>     %define ABI_File_DYN    3       ; 共享目标文件
+   125                              <1>     %define ABI_File_CORE   4       ; 核心文件
+   126                              <1> 
+   127                              <1>     %define Section_Type_NULL    0      ; 未使用
+   128                              <1>     %define Section_Type_LOAD    1      ; 可加载段
+   129                              <1>     %define Section_Type_DYNAMIC 2      ; 动态链接信息
+   130                              <1>     %define Section_Type_INTERP  3      ; 解释器路径
+   131                              <1>     %define Section_Type_NOTE    4      ; 辅助信息
+   132                              <1>     %define Section_Type_SHLIB   5      ; 保留
+   133                              <1> 
+   134                              <1>     %macro ABI_HEADER 4 ;1=File Type, 2=Entry Point Address, 3=Section Header Offset, 4=Section Header Count
+   135                              <1>         db 0xA5, 'A', 'B', 'I'     ; ABI Magic Number
+   136                              <1>         db 1                       ; Encode Type
+   137                              <1>         db 1                       ; ABI Version
+   138                              <1> 
+   139                              <1>         dw %1                      ; ABI File Type
+   140                              <1>         dq %2                      ; Entry Point Address
+   141                              <1>         dw 32                      ; ABI Headers Size
+   142                              <1> 
+   143                              <1>         dq %3                      ; Section Header Offset
+   144                              <1>         dw 32                      ; Section Header Size
+   145                              <1>         dw %4                      ; Section Header Count
+   146                              <1>         dw 0                       ; Symble Table Entry Size
+   147                              <1>     %endmacro
+   148                              <1>     STRUC struct_ABI_HEADER
+   149 00000000 ????????            <1>         .magic:         resb 4    ; ABI Magic Number (4 bytes)
+   150 00000004 ??                  <1>         .encode_type:   resb 1    ; Encode Type (1 byte)
+   151 00000005 ??                  <1>         .abi_version:   resb 1    ; ABI Version (1 byte)
+   152 00000006 ????                <1>         .file_type:     resw 1    ; ABI File Type (2 bytes)
+   153 00000008 ????????????????    <1>         .entry_point:   resq 1    ; Entry Point Address (8 bytes)
+   154 00000010 ????                <1>         .header_size:   resw 1    ; ABI Headers Size (2 bytes)
+   155 00000012 ????????????????    <1>         .section_offset: resq 1   ; Section Header Offset (8 bytes)
+   156 0000001A ????                <1>         .section_size:  resw 1    ; Section Header Size (2 bytes)
+   157 0000001C ????                <1>         .section_count: resw 1    ; Section Header Count (2 bytes)
+   158 0000001E ????                <1>         .sym_table_size: resw 1   ; Symbol Table Entry Size (2 bytes)
+   159                              <1>     ENDSTRUC
+   160                              <1> 
+   161                              <1>     %macro SECTION_HEADER 4 ;1=Section Type, 2=Virtual Address, 3=Section Offset, 4=Section Size
+   162                              <1>         dq %1                  ; Section Type
+   163                              <1>         dq %2                  ; Virtual Address
+   164                              <1>         dq %3                  ; Section Offset
+   165                              <1>         dq %4                  ; Section Size
+   166                              <1>     %endmacro
+   167                              <1>     STRUC struct_SECTION_HEADER
+   168 00000000 ????????????????    <1>         .type:      resq 1    ; Section Type (8 bytes)
+   169 00000008 ????????????????    <1>         .vaddr:     resq 1    ; Virtual Address (8 bytes)
+   170 00000010 ????????????????    <1>         .offset:    resq 1    ; Section Offset (8 bytes)
+   171 00000018 ????????????????    <1>         .size:      resq 1    ; Section Size (8 bytes)
+   172                              <1>     ENDSTRUC
+   173                              <1> %endif
+   174                              <1> 
+   175                              <1> %endif
+     3                                  [BITS 64]          ; 0xFFFF800000106200
+     4                                  ehdr:
+     5                                      ABI_HEADER ABI_File_CORE, kernel_start, shdr,1
+   135 00000000 A5414249            <1>  db 0xA5, 'A', 'B', 'I'
+   136 00000004 01                  <1>  db 1
+   137 00000005 01                  <1>  db 1
+   138                              <1> 
+   139 00000006 0400                <1>  dw %1
+   140 00000008 [4000000000000000]  <1>  dq %2
+   141 00000010 2000                <1>  dw 32
+   142                              <1> 
+   143 00000012 [2000000000000000]  <1>  dq %3
+   144 0000001A 2000                <1>  dw 32
+   145 0000001C 0100                <1>  dw %4
+   146 0000001E 0000                <1>  dw 0
+     6                                  shdr:
+     7                                      SECTION_HEADER Section_Type_LOAD, 0, kernel_start,section_end-section_start
+   162 00000020 0100000000000000    <1>  dq %1
+   163 00000028 0000000000000000    <1>  dq %2
+   164 00000030 [4000000000000000]  <1>  dq %3
+   165 00000038 9407000000000000    <1>  dq %4
+     8                                  section_start:
+     9                                  kernel_start:
+    10                                  
+    11                                      prepare_call 1,1
+    83                              <1>  %assign total_space ((%1 + %2) * 8)
+    84                              <1> 
+    85                              <1>  %if (total_space % 16) != 0
+    86                              <1>  %assign total_space total_space + 8
+    87                              <1>  %endif
+    88                              <1> 
+    89 00000040 4883EC10            <1>  sub rsp, total_space
+    12 00000044 E839010000                  call video_init
+    13                                      cleanup_call 1,1
+    93                              <1>  %assign total_space ((%1 + %2) * 8)
+    94                              <1>  %if (total_space % 16) != 0
+    95                              <1>  %assign total_space total_space + 8
+    96                              <1>  %endif
+    97 00000049 4883C410            <1>  add rsp, total_space
+    14                                  
+    15                                      prepare_call 1,1
+    83                              <1>  %assign total_space ((%1 + %2) * 8)
+    84                              <1> 
+    85                              <1>  %if (total_space % 16) != 0
+    86                              <1>  %assign total_space total_space + 8
+    87                              <1>  %endif
+    88                              <1> 
+    89 0000004D 4883EC10            <1>  sub rsp, total_space
+    16 00000051 E8DB020000                  call printk_init
+    17                                      cleanup_call 1,1
+    93                              <1>  %assign total_space ((%1 + %2) * 8)
+    94                              <1>  %if (total_space % 16) != 0
+    95                              <1>  %assign total_space total_space + 8
+    96                              <1>  %endif
+    97 00000056 4883C410            <1>  add rsp, total_space
+    18                                  
+    19                                      prepare_call 3,1
+    83                              <1>  %assign total_space ((%1 + %2) * 8)
+    84                              <1> 
+    85                              <1>  %if (total_space % 16) != 0
+    86                              <1>  %assign total_space total_space + 8
+    87                              <1>  %endif
+    88                              <1> 
+    89 0000005A 4883EC20            <1>  sub rsp, total_space
+    20 0000005E 48C7442410FFFFFF00          mov qword [rsp+16], 0x00FFFFFF
+    21 00000067 48C7442408C8000000          mov qword [rsp+8], 200
+    22 00000070 48C7042464000000            mov qword [rsp], 100
+    23 00000078 E863010000                  call draw_pixel
+    24                                      cleanup_call 3,1
+    93                              <1>  %assign total_space ((%1 + %2) * 8)
+    94                              <1>  %if (total_space % 16) != 0
+    95                              <1>  %assign total_space total_space + 8
+    96                              <1>  %endif
+    97 0000007D 4883C420            <1>  add rsp, total_space
+    25 00000081 488B4424F8                  mov rax, [rsp-8]
+    26                                  
+    27                                  ; draw_line:; Input: rdi = x1, rsi = y1, rdx = x2, rcx = y2, r8 = color
+    28                                  ; mov rdi, 100
+    29                                  ; mov rsi, 100
+    30                                  ; mov rdx, 200
+    31                                  ; mov rcx, 200
+    32                                  ; mov r8, 0x00FF00FF
+    33                                  ; call draw_line
+    34                                  
+    35                                  ;    jmp $
+    36 00000086 41B800000000                mov r8, 0
+    37 0000008C 41B900000000                mov r9, 0
+    38 00000092 488D35EF040000              lea rsi,[rel messages]
+    39 00000099 E873040000                  call draw_string
+    40                                  
+    41 0000009E 41B800000000                mov r8, 0
+    42 000000A4 41B914000000                mov r9, 20
+    43 000000AA 488D3500050000              lea rsi,[rel messages1]
+    44 000000B1 E85B040000                  call draw_string
+    45                                  
+    46 000000B6 41B800000000                mov r8, 0
+    47 000000BC 41B928000000                mov r9, 40
+    48 000000C2 488D351C050000              lea rsi,[rel messages2]
+    49 000000C9 E843040000                  call draw_string
+    50                                  
+    51 000000CE 41B800000000                mov r8, 0
+    52 000000D4 41B93C000000                mov r9, 60
+    53 000000DA 488D354B050000              lea rsi,[rel messages3]
+    54 000000E1 E82B040000                  call draw_string
+    55                                  
+    56 000000E6 41B800000000                    mov r8, 0
+    57 000000EC 41B950000000                mov r9, 80
+    58 000000F2 488D35A3050000              lea rsi,[rel messages4]
+    59 000000F9 E813040000                  call draw_string
+    60                                  
+    61 000000FE 41B800000000                    mov r8, 0
+    62 00000104 41B964000000                mov r9, 100
+    63 0000010A 488D35DC050000              lea rsi,[rel messages5]
+    64 00000111 E8FB030000                  call draw_string
+    65                                  
+    66 00000116 41B800000000                    mov r8, 0
+    67 0000011C 41B978000000                mov r9, 120
+    68 00000122 488D3515060000              lea rsi,[rel messages6]
+    69 00000129 E8E3030000                  call draw_string
+    70                                  
+    71                                      ; mov rdi, 0xFFFF800003000000
+    72                                      ; mov rax,0
+    73                                      ; mov rbx,40
+    74                                      ; mov rcx,30
+    75                                  
+    76                                      ; ; lea rsi,[rel params]
+    77                                      ; mov rsi,0xffff800000008800
+    78                                      ; call print_hex_str
+    79                                  
+    80 0000012E EBFE                        jmp $
+    81                                  
+    82                                  parse_system_params:
+    83                                  
+    84                                  
+    85                                      prolog 2;
+    24 00000130 55                  <1>  push rbp
+    25 00000131 4889E5              <1>  mov rbp, rsp
+    26                              <1> 
+    27 00000134 B802000000          <1>  mov rax, %1
+    28 00000139 4883C00F            <1>  add rax, 15
+    29 0000013D 4883E0F0            <1>  and rax, ~15
+    30 00000141 4829C4              <1>  sub rsp, rax
+    31                              <1> 
+    32 00000144 4157                <1>  push r15
+    33 00000146 4156                <1>  push r14
+    34 00000148 4155                <1>  push r13
+    35 0000014A 4154                <1>  push r12
+    36 0000014C 4153                <1>  push r11
+    37 0000014E 4152                <1>  push r10
+    38 00000150 4151                <1>  push r9
+    39 00000152 4150                <1>  push r8
+    40 00000154 57                  <1>  push rdi
+    41 00000155 56                  <1>  push rsi
+    42 00000156 52                  <1>  push rdx
+    43 00000157 51                  <1>  push rcx
+    44 00000158 53                  <1>  push rbx
+    45 00000159 50                  <1>  push rax
+    46                              <1> 
+    47                              <1> 
+    48                              <1> 
+    49                              <1> 
+    50                              <1> 
+    86                                      ; get_param rax, 1   ; a
+    87                                  
+    88                                      ; add rax, 3       ; sum = a + b
+    89                                      ; set_ret_param rax,1
+    90                                      epilog
+    54 0000015A 58                  <1>  pop rax
+    55 0000015B 5B                  <1>  pop rbx
+    56 0000015C 59                  <1>  pop rcx
+    57 0000015D 5A                  <1>  pop rdx
+    58 0000015E 5E                  <1>  pop rsi
+    59 0000015F 5F                  <1>  pop rdi
+    60 00000160 4158                <1>  pop r8
+    61 00000162 4159                <1>  pop r9
+    62 00000164 415A                <1>  pop r10
+    63 00000166 415B                <1>  pop r11
+    64 00000168 415C                <1>  pop r12
+    65 0000016A 415D                <1>  pop r13
+    66 0000016C 415E                <1>  pop r14
+    67 0000016E 415F                <1>  pop r15
+    68                              <1> 
+    69 00000170 4889EC              <1>  mov rsp, rbp
+    70 00000173 5D                  <1>  pop rbp
+    71 00000174 C3                  <1>  ret
+    91                                      
+    92                                  %include "../kernel/printk.asm"
+     1                              <1> %ifndef PRINTK_ASM
+     2                              <1> %define PRINTK_ASM
+     3                              <1> 
+     4                              <1> %include "../bootloader/global_def.asm"
+     1                              <2> %ifndef GLOBAL_DEF_ASM
+     2                              <2> %define GLOBAL_DEF_ASM
+     3                              <2> 
+     4                              <2> 
+     5                              <2> ;|----------------------|
+     6                              <2> ;|	100000 ~ END	|
+     7                              <2> ;|	   KERNEL	|
+     8                              <2> ;|----------------------|
+     9                              <2> ;|	E0000 ~ 100000	|
+    10                              <2> ;| Extended System BIOS |
+    11                              <2> ;|----------------------|
+    12                              <2> ;|	C0000 ~ Dffff	|
+    13                              <2> ;|     Expansion Area   |
+    14                              <2> ;|----------------------|
+    15                              <2> ;|	A0000 ~ bffff	|
+    16                              <2> ;|   Legacy Video Area  |
+    17                              <2> ;|----------------------|
+    18                              <2> ;|	9f000 ~ A0000	|
+    19                              <2> ;|	 BIOS reserve	|
+    20                              <2> ;|----------------------|
+    21                              <2> ;|	90000 ~ 9f000	|
+    22                              <2> ;|	 kernel tmpbuf	|
+    23                              <2> ;|----------------------|
+    24                              <2> ;|	10000 ~ 90000	|
+    25                              <2> ;|	   LOADER	|
+    26                              <2> ;|----------------------|
+    27                              <2> ;|	8000 ~ 10000	|
+    28                              <2> ;|	  VBE info	|
+    29                              <2> ;|----------------------|
+    30                              <2> ;|	7e00 ~ 8000	|
+    31                              <2> ;|	  mem info	|
+    32                              <2> ;|----------------------|
+    33                              <2> ;|	7c00 ~ 7e00	|
+    34                              <2> ;|	 MBR (BOOT)	|
+    35                              <2> ;|----------------------|
+    36                              <2> ;|	0000 ~ 7c00	|
+    37                              <2> ;|	 BIOS Code	|
+    38                              <2> ;|----------------------|
+    39                              <2> 
+    40                              <2> 
+    41                              <2> ;_______________________________________________________
+    42                              <2> ; START	END	    SIZE	        USED
+    43                              <2> ; FFFF0	FFFFF	16B	        BIOS System Entry
+    44                              <2> ; F0000	FFFEF	64KB-16B	BIOS System Code
+    45                              <2> ; C8000	EFFFF	160KB	    ROM/Mapped IO
+    46                              <2> ; C0000	C7FFF	32KB	    Graphic Adapter BIOS
+    47                              <2> ; B8000	BFFFF	32KB	    Chroma Text Video Buffer
+    48                              <2> ; B0000	B7FFF	32KB	    Mono Text Video Buffer
+    49                              <2> ; A0000	AFFFF	64KB	    Graphic Video Buffer
+    50                              <2> ; 9FC00	9FFFF	1KB	        Extended BIOS Data Area
+    51                              <2> ; 7E00	9FBFF	622080B     Useable 608KB	
+    52                              <2> ; 7C00	7DFF	512B	    MBR
+    53                              <2> ; 500	7BFF	30464B      Useable 30KB	
+    54                              <2> ; 400	4FF	    256B	    BIOS Data Area
+    55                              <2> ; 000	3FF	    1KB	        IVT
+    56                              <2> ; _____________________________________________________
+    57                              <2> 
+    58                              <2> 
+    59                              <2> 
+    60                              <2> 
+    61                              <2> 
+    62                              <2> 
+    63                              <2> 
+    64                              <2> 
+    65                              <2> 
+    66                              <2> 
+    67                              <2> 
+    68                              <2> ;|----------------------|
+    69                              <2> ;|	100000 ~ END	|
+    70                              <2> ;|	   KERNEL	|
+    71                              <2> ;|----------------------|
+    72                              <2> ;|	E0000 ~ 100000	|
+    73                              <2> ;| Extended System BIOS |
+    74                              <2> ;|----------------------|
+    75                              <2> ;|	C0000 ~ Dffff	|
+    76                              <2> ;|     Expansion Area   |
+    77                              <2> ;|----------------------|
+    78                              <2> ;|	A0000 ~ bffff	|
+    79                              <2> ;|   Legacy Video Area  |
+    80                              <2> ;|----------------------|
+    81                              <2> ;|	9F000 ~ A0000	|
+    82                              <2> ;|	 BIOS reserve	|
+    83                              <2> ;|----------------------|
+    84                              <2> ;|	90000 ~ 9F000	|
+    85                              <2> ;|	 kernel tmpbuf	|
+    86                              <2> ;|----------------------|
+    87                              <2> ;|	10000 ~ 90000	|
+    88                              <2> ;|	   LOADER	|
+    89                              <2> ;|----------------------|
+    90                              <2> ;|	8000 ~ 10000	|
+    91                              <2> ;|	  VBE info	|
+    92                              <2> ;|----------------------|
+    93                              <2> ;|	7E00 ~ 8000	|
+    94                              <2> ;|	  mem info	|
+    95                              <2> ;|----------------------|
+    96                              <2> ;|	7C00 ~ 7E00	|
+    97                              <2> ;|	 MBR (BOOT)	|
+    98                              <2> ;|----------------------|
+    99                              <2> ;|	0000 ~ 7C00	|
+   100                              <2> ;|	 BIOS Code	|
+   101                              <2> ;|----------------------|
+   102                              <2> 
+   103                              <2> 
+   104                              <2> 
+   105                              <2> 
+   106                              <2> 
+   107                              <2> 
+   108                              <2> 
+   109                              <2> 
+   110                              <2> 
+   111                              <2> 
+   112                              <2> ;______________________________________________
+   113                              <2> ; ----------------Vbe Info Block------------
+   114                              <2> ; typedef struct {
+   115                              <2> ;     unsigned char       vbe_signature;
+   116                              <2> ;     unsigned short      vbe_version;
+   117                              <2> ;     unsigned long       oem_string_ptr;
+   118                              <2> ;     unsigned char       capabilities;
+   119                              <2> ;     unsigned long       video_mode_ptr;
+   120                              <2> ;     unsigned short      total_memory;
+   121                              <2> ;     unsigned short      oem_software_rev;
+   122                              <2> ;     unsigned long       oem_vendor_name_ptr;
+   123                              <2> ;     unsigned long       oem_product_name_ptr;
+   124                              <2> ;     unsigned long       oem_product_rev_ptr;
+   125                              <2> ;     unsigned char       reserved[222];
+   126                              <2> ;     unsigned char       oem_data[256];  
+   127                              <2> ; } VbeInfoBlock;
+   128                              <2> ;______________________________________________
+   129                              <2> 
+   130                              <2> 
+   131                              <2> BaseOfKernelFile	equ	0x00
+   132                              <2> OffsetOfKernelFile	equ	0x100000
+   133                              <2> BaseTmpOfKernelAddr	equ	0x9000
+   134                              <2> OffsetTmpOfKernelFile	equ	0x0000
+   135                              <2> VBEStructBufferAddr	equ	0x8000
+   136                              <2> VBEModeStructBufferAddr	equ	0x8200
+   137                              <2> MemoryStructBufferAddr	equ	0x8800
+   138                              <2> KernelSpaceUpperAddress equ 0xFFFF800000000000
+   139                              <2> VideoFrameBufferAddress equ 0xFFFF800003000000
+   140                              <2> KernelStartSectorNum	equ	16
+   141                              <2> 
+   142                              <2> 
+   143                              <2> %define PLATFORM_QEMU_X64 1
+   144                              <2> %define PLATFORM_X64 2
+   145                              <2> 
+   146                              <2> %define DEBUG_PLATFORM PLATFORM_QEMU_X64
+   147                              <2> %define DEBUG_MODE 1
+   148                              <2> 
+   149                              <2> 
+   150                              <2> MasterSectorReadNumPort    equ	0x1F2
+   151                              <2> MasterSectorReadPort    equ	0x1F0
+   152                              <2> 
+   153                              <2> SlaveReadNumPort    equ	0x172
+   154                              <2> SlaveSectorReadPort    equ	0x170
+   155                              <2> 
+   156                              <2> SectorReadNumPort    equ	MasterSectorReadNumPort
+   157                              <2> SectorReadPort    equ	MasterSectorReadPort
+   158                              <2> 
+   159                              <2> struc vbe_info_block
+   160                              <2>     .signature                 resb 4    ; 'VESA' signature (must be "VESA")
+   161                              <2>     .version                   resw 1    ; VBE version (e.g., 0x0300 for VBE 3.0)
+   162                              <2>     .oem_string_ptr            resd 1    ; Pointer to OEM string
+   163                              <2>     .capabilities              resd 1    ; Capabilities of the video card
+   164                              <2>     .video_mode_ptr            resd 1    ; Pointer to supported video modes
+   165                              <2>     .total_memory              resw 1    ; Total memory in 64KB blocks
+   166                              <2> 
+   167                              <2>     ; VBE 2.0+ fields
+   168                              <2>     .oem_software_rev          resw 1    ; OEM software revision
+   169                              <2>     .oem_vendor_name_ptr       resd 1    ; Pointer to OEM vendor name string
+   170                              <2>     .oem_product_name_ptr      resd 1    ; Pointer to OEM product name string
+   171                              <2>     .oem_product_rev_ptr       resd 1    ; Pointer to OEM product revision string
+   172                              <2>     .reserved                  resb 222  ; Reserved for VBE implementation
+   173                              <2>     .oem_data                  resb 256  ; Data area for OEM-specific information
+   174                              <2> endstruc
+   175                              <2> 
+   176                              <2> struc vbe_mode_info_block
+   177                              <2>     .attributes                resw 1    ; Mode attributes
+   178                              <2>     .winA_attributes           resb 1    ; Window A attributes
+   179                              <2>     .winB_attributes           resb 1    ; Window B attributes
+   180                              <2>     .win_granularity           resw 1    ; Window granularity in KB
+   181                              <2>     .win_size                  resw 1    ; Window size in KB
+   182                              <2>     .winA_segment              resw 1    ; Window A segment
+   183                              <2>     .winB_segment              resw 1    ; Window B segment
+   184                              <2>     .win_func_ptr              resd 1    ; Pointer to window function
+   185                              <2>     .bytes_per_scanline        resw 1    ; Bytes per scanline
+   186                              <2> 
+   187                              <2>     ; VBE 1.2+ fields
+   188                              <2>     .x_resolution              resw 1    ; Horizontal resolution in pixels
+   189                              <2>     .y_resolution              resw 1    ; Vertical resolution in pixels
+   190                              <2>     .x_char_size               resb 1    ; Character cell width in pixels
+   191                              <2>     .y_char_size               resb 1    ; Character cell height in pixels
+   192                              <2>     .number_of_planes          resb 1    ; Number of memory planes
+   193                              <2>     .bits_per_pixel            resb 1    ; Bits per pixel
+   194                              <2>     .number_of_banks           resb 1    ; Number of banks
+   195                              <2>     .memory_model              resb 1    ; Memory model type
+   196                              <2>     .bank_size                 resb 1    ; Bank size in KB
+   197                              <2>     .number_of_image_pages     resb 1    ; Number of images
+   198                              <2>     .reserved1                 resb 1    ; Reserved
+   199                              <2> 
+   200                              <2>     ; Direct Color fields (VBE 1.2+)
+   201                              <2>     .red_mask_size             resb 1    ; Size of direct color red mask
+   202                              <2>     .red_field_position        resb 1    ; Bit position of red mask
+   203                              <2>     .green_mask_size           resb 1    ; Size of direct color green mask
+   204                              <2>     .green_field_position      resb 1    ; Bit position of green mask
+   205                              <2>     .blue_mask_size            resb 1    ; Size of direct color blue mask
+   206                              <2>     .blue_field_position       resb 1    ; Bit position of blue mask
+   207                              <2>     .reserved_mask_size        resb 1    ; Size of direct color reserved mask
+   208                              <2>     .reserved_field_position   resb 1    ; Bit position of reserved mask
+   209                              <2>     .direct_color_mode_info    resb 1    ; Direct color mode attributes
+   210                              <2> 
+   211                              <2>     ; VBE 2.0+ fields
+   212                              <2>     .phys_base_ptr             resd 1    ; Physical address for flat memory frame buffer
+   213                              <2>     .reserved2                 resd 1    ; Reserved
+   214                              <2>     .reserved3                 resw 1    ; Reserved
+   215                              <2> 
+   216                              <2>     ; VBE 3.0+ fields
+   217                              <2>     .lin_bytes_per_scanline    resw 1    ; Bytes per scanline for linear modes
+   218                              <2>     .bnk_number_of_image_pages resb 1    ; Number of images for banked modes
+   219                              <2>     .lin_number_of_image_pages resb 1    ; Number of images for linear modes
+   220                              <2>     .lin_red_mask_size         resb 1    ; Size of direct color red mask (linear modes)
+   221                              <2>     .lin_red_field_position    resb 1    ; Bit position of red mask (linear modes)
+   222                              <2>     .lin_green_mask_size       resb 1    ; Size of direct color green mask (linear modes)
+   223                              <2>     .lin_green_field_position  resb 1    ; Bit position of green mask (linear modes)
+   224                              <2>     .lin_blue_mask_size        resb 1    ; Size of direct color blue mask (linear modes)
+   225                              <2>     .lin_blue_field_position   resb 1    ; Bit position of blue mask (linear modes)
+   226                              <2>     .lin_reserved_mask_size    resb 1    ; Size of direct color reserved mask (linear modes)
+   227                              <2>     .lin_reserved_field_position resb 1  ; Bit position of reserved mask (linear modes)
+   228                              <2>     .max_pixel_clock           resd 1    ; Maximum pixel clock (Hz)
+   229                              <2>     .reserved4                 resb 190  ; Reserved for future expansion
+   230                              <2> endstruc
+   231                              <2> 
+   232                              <2> struc e820_memory_entry
+   233                              <2>     .base_addr_low            resd 1    ; Lower 32 bits of the base address
+   234                              <2>     .base_addr_high           resd 1    ; Upper 32 bits of the base address
+   235                              <2>     .length_low               resd 1    ; Lower 32 bits of the length
+   236                              <2>     .length_high              resd 1    ; Upper 32 bits of the length
+   237                              <2>     .type                     resd 1    ; Memory type (1 = usable, others = reserved, etc.)
+   238                              <2>     ; .acpi_attributes          resd 1    ; ACPI 3.0+ attributes (optional, may be zero)
+   239                              <2> endstruc
+   240                              <2> 
+   241                              <2> %endif
+     5                              <1> %include "../kernel/video.asm"
+     1                              <2> %ifndef VIDEO_ASM
+     2                              <2> %define VIDEO_ASM
+     3                              <2> %include "../bootloader/global_def.asm"
+     1                              <3> %ifndef GLOBAL_DEF_ASM
+     2                              <3> %define GLOBAL_DEF_ASM
+     3                              <3> 
+     4                              <3> 
+     5                              <3> ;|----------------------|
+     6                              <3> ;|	100000 ~ END	|
+     7                              <3> ;|	   KERNEL	|
+     8                              <3> ;|----------------------|
+     9                              <3> ;|	E0000 ~ 100000	|
+    10                              <3> ;| Extended System BIOS |
+    11                              <3> ;|----------------------|
+    12                              <3> ;|	C0000 ~ Dffff	|
+    13                              <3> ;|     Expansion Area   |
+    14                              <3> ;|----------------------|
+    15                              <3> ;|	A0000 ~ bffff	|
+    16                              <3> ;|   Legacy Video Area  |
+    17                              <3> ;|----------------------|
+    18                              <3> ;|	9f000 ~ A0000	|
+    19                              <3> ;|	 BIOS reserve	|
+    20                              <3> ;|----------------------|
+    21                              <3> ;|	90000 ~ 9f000	|
+    22                              <3> ;|	 kernel tmpbuf	|
+    23                              <3> ;|----------------------|
+    24                              <3> ;|	10000 ~ 90000	|
+    25                              <3> ;|	   LOADER	|
+    26                              <3> ;|----------------------|
+    27                              <3> ;|	8000 ~ 10000	|
+    28                              <3> ;|	  VBE info	|
+    29                              <3> ;|----------------------|
+    30                              <3> ;|	7e00 ~ 8000	|
+    31                              <3> ;|	  mem info	|
+    32                              <3> ;|----------------------|
+    33                              <3> ;|	7c00 ~ 7e00	|
+    34                              <3> ;|	 MBR (BOOT)	|
+    35                              <3> ;|----------------------|
+    36                              <3> ;|	0000 ~ 7c00	|
+    37                              <3> ;|	 BIOS Code	|
+    38                              <3> ;|----------------------|
+    39                              <3> 
+    40                              <3> 
+    41                              <3> ;_______________________________________________________
+    42                              <3> ; START	END	    SIZE	        USED
+    43                              <3> ; FFFF0	FFFFF	16B	        BIOS System Entry
+    44                              <3> ; F0000	FFFEF	64KB-16B	BIOS System Code
+    45                              <3> ; C8000	EFFFF	160KB	    ROM/Mapped IO
+    46                              <3> ; C0000	C7FFF	32KB	    Graphic Adapter BIOS
+    47                              <3> ; B8000	BFFFF	32KB	    Chroma Text Video Buffer
+    48                              <3> ; B0000	B7FFF	32KB	    Mono Text Video Buffer
+    49                              <3> ; A0000	AFFFF	64KB	    Graphic Video Buffer
+    50                              <3> ; 9FC00	9FFFF	1KB	        Extended BIOS Data Area
+    51                              <3> ; 7E00	9FBFF	622080B     Useable 608KB	
+    52                              <3> ; 7C00	7DFF	512B	    MBR
+    53                              <3> ; 500	7BFF	30464B      Useable 30KB	
+    54                              <3> ; 400	4FF	    256B	    BIOS Data Area
+    55                              <3> ; 000	3FF	    1KB	        IVT
+    56                              <3> ; _____________________________________________________
+    57                              <3> 
+    58                              <3> 
+    59                              <3> 
+    60                              <3> 
+    61                              <3> 
+    62                              <3> 
+    63                              <3> 
+    64                              <3> 
+    65                              <3> 
+    66                              <3> 
+    67                              <3> 
+    68                              <3> ;|----------------------|
+    69                              <3> ;|	100000 ~ END	|
+    70                              <3> ;|	   KERNEL	|
+    71                              <3> ;|----------------------|
+    72                              <3> ;|	E0000 ~ 100000	|
+    73                              <3> ;| Extended System BIOS |
+    74                              <3> ;|----------------------|
+    75                              <3> ;|	C0000 ~ Dffff	|
+    76                              <3> ;|     Expansion Area   |
+    77                              <3> ;|----------------------|
+    78                              <3> ;|	A0000 ~ bffff	|
+    79                              <3> ;|   Legacy Video Area  |
+    80                              <3> ;|----------------------|
+    81                              <3> ;|	9F000 ~ A0000	|
+    82                              <3> ;|	 BIOS reserve	|
+    83                              <3> ;|----------------------|
+    84                              <3> ;|	90000 ~ 9F000	|
+    85                              <3> ;|	 kernel tmpbuf	|
+    86                              <3> ;|----------------------|
+    87                              <3> ;|	10000 ~ 90000	|
+    88                              <3> ;|	   LOADER	|
+    89                              <3> ;|----------------------|
+    90                              <3> ;|	8000 ~ 10000	|
+    91                              <3> ;|	  VBE info	|
+    92                              <3> ;|----------------------|
+    93                              <3> ;|	7E00 ~ 8000	|
+    94                              <3> ;|	  mem info	|
+    95                              <3> ;|----------------------|
+    96                              <3> ;|	7C00 ~ 7E00	|
+    97                              <3> ;|	 MBR (BOOT)	|
+    98                              <3> ;|----------------------|
+    99                              <3> ;|	0000 ~ 7C00	|
+   100                              <3> ;|	 BIOS Code	|
+   101                              <3> ;|----------------------|
+   102                              <3> 
+   103                              <3> 
+   104                              <3> 
+   105                              <3> 
+   106                              <3> 
+   107                              <3> 
+   108                              <3> 
+   109                              <3> 
+   110                              <3> 
+   111                              <3> 
+   112                              <3> ;______________________________________________
+   113                              <3> ; ----------------Vbe Info Block------------
+   114                              <3> ; typedef struct {
+   115                              <3> ;     unsigned char       vbe_signature;
+   116                              <3> ;     unsigned short      vbe_version;
+   117                              <3> ;     unsigned long       oem_string_ptr;
+   118                              <3> ;     unsigned char       capabilities;
+   119                              <3> ;     unsigned long       video_mode_ptr;
+   120                              <3> ;     unsigned short      total_memory;
+   121                              <3> ;     unsigned short      oem_software_rev;
+   122                              <3> ;     unsigned long       oem_vendor_name_ptr;
+   123                              <3> ;     unsigned long       oem_product_name_ptr;
+   124                              <3> ;     unsigned long       oem_product_rev_ptr;
+   125                              <3> ;     unsigned char       reserved[222];
+   126                              <3> ;     unsigned char       oem_data[256];  
+   127                              <3> ; } VbeInfoBlock;
+   128                              <3> ;______________________________________________
+   129                              <3> 
+   130                              <3> 
+   131                              <3> BaseOfKernelFile	equ	0x00
+   132                              <3> OffsetOfKernelFile	equ	0x100000
+   133                              <3> BaseTmpOfKernelAddr	equ	0x9000
+   134                              <3> OffsetTmpOfKernelFile	equ	0x0000
+   135                              <3> VBEStructBufferAddr	equ	0x8000
+   136                              <3> VBEModeStructBufferAddr	equ	0x8200
+   137                              <3> MemoryStructBufferAddr	equ	0x8800
+   138                              <3> KernelSpaceUpperAddress equ 0xFFFF800000000000
+   139                              <3> VideoFrameBufferAddress equ 0xFFFF800003000000
+   140                              <3> KernelStartSectorNum	equ	16
+   141                              <3> 
+   142                              <3> 
+   143                              <3> %define PLATFORM_QEMU_X64 1
+   144                              <3> %define PLATFORM_X64 2
+   145                              <3> 
+   146                              <3> %define DEBUG_PLATFORM PLATFORM_QEMU_X64
+   147                              <3> %define DEBUG_MODE 1
+   148                              <3> 
+   149                              <3> 
+   150                              <3> MasterSectorReadNumPort    equ	0x1F2
+   151                              <3> MasterSectorReadPort    equ	0x1F0
+   152                              <3> 
+   153                              <3> SlaveReadNumPort    equ	0x172
+   154                              <3> SlaveSectorReadPort    equ	0x170
+   155                              <3> 
+   156                              <3> SectorReadNumPort    equ	MasterSectorReadNumPort
+   157                              <3> SectorReadPort    equ	MasterSectorReadPort
+   158                              <3> 
+   159                              <3> struc vbe_info_block
+   160                              <3>     .signature                 resb 4    ; 'VESA' signature (must be "VESA")
+   161                              <3>     .version                   resw 1    ; VBE version (e.g., 0x0300 for VBE 3.0)
+   162                              <3>     .oem_string_ptr            resd 1    ; Pointer to OEM string
+   163                              <3>     .capabilities              resd 1    ; Capabilities of the video card
+   164                              <3>     .video_mode_ptr            resd 1    ; Pointer to supported video modes
+   165                              <3>     .total_memory              resw 1    ; Total memory in 64KB blocks
+   166                              <3> 
+   167                              <3>     ; VBE 2.0+ fields
+   168                              <3>     .oem_software_rev          resw 1    ; OEM software revision
+   169                              <3>     .oem_vendor_name_ptr       resd 1    ; Pointer to OEM vendor name string
+   170                              <3>     .oem_product_name_ptr      resd 1    ; Pointer to OEM product name string
+   171                              <3>     .oem_product_rev_ptr       resd 1    ; Pointer to OEM product revision string
+   172                              <3>     .reserved                  resb 222  ; Reserved for VBE implementation
+   173                              <3>     .oem_data                  resb 256  ; Data area for OEM-specific information
+   174                              <3> endstruc
+   175                              <3> 
+   176                              <3> struc vbe_mode_info_block
+   177                              <3>     .attributes                resw 1    ; Mode attributes
+   178                              <3>     .winA_attributes           resb 1    ; Window A attributes
+   179                              <3>     .winB_attributes           resb 1    ; Window B attributes
+   180                              <3>     .win_granularity           resw 1    ; Window granularity in KB
+   181                              <3>     .win_size                  resw 1    ; Window size in KB
+   182                              <3>     .winA_segment              resw 1    ; Window A segment
+   183                              <3>     .winB_segment              resw 1    ; Window B segment
+   184                              <3>     .win_func_ptr              resd 1    ; Pointer to window function
+   185                              <3>     .bytes_per_scanline        resw 1    ; Bytes per scanline
+   186                              <3> 
+   187                              <3>     ; VBE 1.2+ fields
+   188                              <3>     .x_resolution              resw 1    ; Horizontal resolution in pixels
+   189                              <3>     .y_resolution              resw 1    ; Vertical resolution in pixels
+   190                              <3>     .x_char_size               resb 1    ; Character cell width in pixels
+   191                              <3>     .y_char_size               resb 1    ; Character cell height in pixels
+   192                              <3>     .number_of_planes          resb 1    ; Number of memory planes
+   193                              <3>     .bits_per_pixel            resb 1    ; Bits per pixel
+   194                              <3>     .number_of_banks           resb 1    ; Number of banks
+   195                              <3>     .memory_model              resb 1    ; Memory model type
+   196                              <3>     .bank_size                 resb 1    ; Bank size in KB
+   197                              <3>     .number_of_image_pages     resb 1    ; Number of images
+   198                              <3>     .reserved1                 resb 1    ; Reserved
+   199                              <3> 
+   200                              <3>     ; Direct Color fields (VBE 1.2+)
+   201                              <3>     .red_mask_size             resb 1    ; Size of direct color red mask
+   202                              <3>     .red_field_position        resb 1    ; Bit position of red mask
+   203                              <3>     .green_mask_size           resb 1    ; Size of direct color green mask
+   204                              <3>     .green_field_position      resb 1    ; Bit position of green mask
+   205                              <3>     .blue_mask_size            resb 1    ; Size of direct color blue mask
+   206                              <3>     .blue_field_position       resb 1    ; Bit position of blue mask
+   207                              <3>     .reserved_mask_size        resb 1    ; Size of direct color reserved mask
+   208                              <3>     .reserved_field_position   resb 1    ; Bit position of reserved mask
+   209                              <3>     .direct_color_mode_info    resb 1    ; Direct color mode attributes
+   210                              <3> 
+   211                              <3>     ; VBE 2.0+ fields
+   212                              <3>     .phys_base_ptr             resd 1    ; Physical address for flat memory frame buffer
+   213                              <3>     .reserved2                 resd 1    ; Reserved
+   214                              <3>     .reserved3                 resw 1    ; Reserved
+   215                              <3> 
+   216                              <3>     ; VBE 3.0+ fields
+   217                              <3>     .lin_bytes_per_scanline    resw 1    ; Bytes per scanline for linear modes
+   218                              <3>     .bnk_number_of_image_pages resb 1    ; Number of images for banked modes
+   219                              <3>     .lin_number_of_image_pages resb 1    ; Number of images for linear modes
+   220                              <3>     .lin_red_mask_size         resb 1    ; Size of direct color red mask (linear modes)
+   221                              <3>     .lin_red_field_position    resb 1    ; Bit position of red mask (linear modes)
+   222                              <3>     .lin_green_mask_size       resb 1    ; Size of direct color green mask (linear modes)
+   223                              <3>     .lin_green_field_position  resb 1    ; Bit position of green mask (linear modes)
+   224                              <3>     .lin_blue_mask_size        resb 1    ; Size of direct color blue mask (linear modes)
+   225                              <3>     .lin_blue_field_position   resb 1    ; Bit position of blue mask (linear modes)
+   226                              <3>     .lin_reserved_mask_size    resb 1    ; Size of direct color reserved mask (linear modes)
+   227                              <3>     .lin_reserved_field_position resb 1  ; Bit position of reserved mask (linear modes)
+   228                              <3>     .max_pixel_clock           resd 1    ; Maximum pixel clock (Hz)
+   229                              <3>     .reserved4                 resb 190  ; Reserved for future expansion
+   230                              <3> endstruc
+   231                              <3> 
+   232                              <3> struc e820_memory_entry
+   233                              <3>     .base_addr_low            resd 1    ; Lower 32 bits of the base address
+   234                              <3>     .base_addr_high           resd 1    ; Upper 32 bits of the base address
+   235                              <3>     .length_low               resd 1    ; Lower 32 bits of the length
+   236                              <3>     .length_high              resd 1    ; Upper 32 bits of the length
+   237                              <3>     .type                     resd 1    ; Memory type (1 = usable, others = reserved, etc.)
+   238                              <3>     ; .acpi_attributes          resd 1    ; ACPI 3.0+ attributes (optional, may be zero)
+   239                              <3> endstruc
+   240                              <3> 
+   241                              <3> %endif
+     4                              <2> %include "../kernel/stddef.asm"
+     1                              <3> %ifndef STDDEF_ASM
+     2                              <3> %define STDDEF_ASM
+     3                              <3> 
+     4                              <3> ;-----------Calling Conventions Standard------------;
+     5                              <3> %define USE_CC_STANDARD
+     6                              <3> %ifdef USE_CC_STANDARD
+     7                              <3> ;caller maintain the stack balance 
+     8                              <3> 
+     9                              <3> 
+    10                              <3> ; -------------------------------
+    11                              <3> ; 栈帧结构定义
+    12                              <3> ; -------------------------------
+    13                              <3> ; 调用后的栈布局:
+    14                              <3> ; [rsp+0x00] 返回地址 (8字节)
+    15                              <3> ; [rsp+0x08] 旧RBP     (8字节) <- rbp指向这里
+    16                              <3> ; [rsp+0x10] 参数1     (8字节)
+    17                              <3> ; [rsp+0x18] 参数2
+    18                              <3> ; ...
+    19                              <3> ; [rsp+X]    局部变量区
+    20                              <3> ; -------------------------------
+    21                              <3> 
+    22                              <3> %define PARAM_OFFSET   16      ; 第一个参数的偏移量(返回地址8 + 旧RBP8)
+    23                              <3> %macro prolog 1;local var size(bytes)
+    24                              <3>     push rbp
+    25                              <3>     mov rbp, rsp
+    26                              <3> 
+    27                              <3>     mov rax, %1
+    28                              <3>     add rax, 15
+    29                              <3>     and rax, ~15
+    30                              <3>     sub rsp, rax
+    31                              <3> 
+    32                              <3>     push r15
+    33                              <3>     push r14
+    34                              <3>     push r13
+    35                              <3>     push r12
+    36                              <3>     push r11
+    37                              <3>     push r10
+    38                              <3>     push r9
+    39                              <3>     push r8
+    40                              <3>     push rdi
+    41                              <3>     push rsi
+    42                              <3>     push rdx
+    43                              <3>     push rcx
+    44                              <3>     push rbx
+    45                              <3>     push rax
+    46                              <3>     
+    47                              <3>     ; 调试信息可以放在这里
+    48                              <3>     ; %ifdef DEBUG
+    49                              <3>     ;     mov [rbp-8], rdi    ; 保存第一个参数用于调试
+    50                              <3>     ; %endif
+    51                              <3> %endmacro
+    52                              <3> 
+    53                              <3> %macro epilog 0
+    54                              <3>     pop rax
+    55                              <3>     pop rbx
+    56                              <3>     pop rcx
+    57                              <3>     pop rdx
+    58                              <3>     pop rsi
+    59                              <3>     pop rdi
+    60                              <3>     pop r8
+    61                              <3>     pop r9
+    62                              <3>     pop r10
+    63                              <3>     pop r11
+    64                              <3>     pop r12
+    65                              <3>     pop r13
+    66                              <3>     pop r14
+    67                              <3>     pop r15
+    68                              <3> 
+    69                              <3>     mov rsp, rbp
+    70                              <3>     pop rbp
+    71                              <3>     ret
+    72                              <3> %endmacro
+    73                              <3> 
+    74                              <3> %macro get_param 2;1=register, 2=param index(from 1)
+    75                              <3>     mov %1, [rbp + PARAM_OFFSET + 8*(%2-1)]
+    76                              <3> %endmacro
+    77                              <3> 
+    78                              <3> %macro set_ret_param 2;1=register, 2=param index(from 1)
+    79                              <3>     mov [rbp + PARAM_OFFSET + 8*(%2-1)], %1
+    80                              <3> %endmacro
+    81                              <3> 
+    82                              <3> %macro prepare_call 2;1=param count, 2=return param count
+    83                              <3>     %assign total_space ((%1 + %2) * 8)
+    84                              <3>     
+    85                              <3>     %if (total_space % 16) != 0
+    86                              <3>         %assign total_space total_space + 8  ; 添加填充
+    87                              <3>     %endif
+    88                              <3>     
+    89                              <3>     sub rsp, total_space
+    90                              <3> %endmacro
+    91                              <3> 
+    92                              <3> %macro cleanup_call 2;1=param count, 2=return param count
+    93                              <3>     %assign total_space ((%1 + %2) * 8)
+    94                              <3>     %if (total_space % 16) != 0
+    95                              <3>         %assign total_space total_space + 8
+    96                              <3>     %endif
+    97                              <3>     add rsp, total_space
+    98                              <3> %endmacro
+    99                              <3> 
+   100                              <3> 
+   101                              <3> ; %macro function 1-*;1=function entry offset
+   102                              <3> ;     prepare_call %0-2,1
+   103                              <3> 
+   104                              <3> ;     %assign i %0
+   105                              <3> ;     %rep i-1
+   106                              <3> ;         %rotate -1
+   107                              <3> ;         push %1
+   108                              <3> ;     %endrep
+   109                              <3> ;     call %1
+   110                              <3> 
+   111                              <3> ;     cleanup_call %0-2,1
+   112                              <3> ;     ; mov rax,[rsp-8]
+   113                              <3> ; %endmacro
+   114                              <3> 
+   115                              <3> %endif
+   116                              <3> ;---------------------ABI Standard------------------;
+   117                              <3> %define USE_ABI_STANDARD
+   118                              <3> %ifdef USE_ABI_STANDARD
+   119                              <3> 
+   120                              <3> 
+   121                              <3>     %define ABI_File_None   0       ; 无文件类型
+   122                              <3>     %define ABI_File_REL    1       ; 可重定位文件
+   123                              <3>     %define ABI_File_EXEC   2       ; 可执行文件
+   124                              <3>     %define ABI_File_DYN    3       ; 共享目标文件
+   125                              <3>     %define ABI_File_CORE   4       ; 核心文件
+   126                              <3> 
+   127                              <3>     %define Section_Type_NULL    0      ; 未使用
+   128                              <3>     %define Section_Type_LOAD    1      ; 可加载段
+   129                              <3>     %define Section_Type_DYNAMIC 2      ; 动态链接信息
+   130                              <3>     %define Section_Type_INTERP  3      ; 解释器路径
+   131                              <3>     %define Section_Type_NOTE    4      ; 辅助信息
+   132                              <3>     %define Section_Type_SHLIB   5      ; 保留
+   133                              <3> 
+   134                              <3>     %macro ABI_HEADER 4 ;1=File Type, 2=Entry Point Address, 3=Section Header Offset, 4=Section Header Count
+   135                              <3>         db 0xA5, 'A', 'B', 'I'     ; ABI Magic Number
+   136                              <3>         db 1                       ; Encode Type
+   137                              <3>         db 1                       ; ABI Version
+   138                              <3> 
+   139                              <3>         dw %1                      ; ABI File Type
+   140                              <3>         dq %2                      ; Entry Point Address
+   141                              <3>         dw 32                      ; ABI Headers Size
+   142                              <3> 
+   143                              <3>         dq %3                      ; Section Header Offset
+   144                              <3>         dw 32                      ; Section Header Size
+   145                              <3>         dw %4                      ; Section Header Count
+   146                              <3>         dw 0                       ; Symble Table Entry Size
+   147                              <3>     %endmacro
+   148                              <3>     STRUC struct_ABI_HEADER
+   149                              <3>         .magic:         resb 4    ; ABI Magic Number (4 bytes)
+   150                              <3>         .encode_type:   resb 1    ; Encode Type (1 byte)
+   151                              <3>         .abi_version:   resb 1    ; ABI Version (1 byte)
+   152                              <3>         .file_type:     resw 1    ; ABI File Type (2 bytes)
+   153                              <3>         .entry_point:   resq 1    ; Entry Point Address (8 bytes)
+   154                              <3>         .header_size:   resw 1    ; ABI Headers Size (2 bytes)
+   155                              <3>         .section_offset: resq 1   ; Section Header Offset (8 bytes)
+   156                              <3>         .section_size:  resw 1    ; Section Header Size (2 bytes)
+   157                              <3>         .section_count: resw 1    ; Section Header Count (2 bytes)
+   158                              <3>         .sym_table_size: resw 1   ; Symbol Table Entry Size (2 bytes)
+   159                              <3>     ENDSTRUC
+   160                              <3> 
+   161                              <3>     %macro SECTION_HEADER 4 ;1=Section Type, 2=Virtual Address, 3=Section Offset, 4=Section Size
+   162                              <3>         dq %1                  ; Section Type
+   163                              <3>         dq %2                  ; Virtual Address
+   164                              <3>         dq %3                  ; Section Offset
+   165                              <3>         dq %4                  ; Section Size
+   166                              <3>     %endmacro
+   167                              <3>     STRUC struct_SECTION_HEADER
+   168                              <3>         .type:      resq 1    ; Section Type (8 bytes)
+   169                              <3>         .vaddr:     resq 1    ; Virtual Address (8 bytes)
+   170                              <3>         .offset:    resq 1    ; Section Offset (8 bytes)
+   171                              <3>         .size:      resq 1    ; Section Size (8 bytes)
+   172                              <3>     ENDSTRUC
+   173                              <3> %endif
+   174                              <3> 
+   175                              <3> %endif
+     5                              <2> [BITS 64]
+     6                              <2> struc video_info
+     7                              <2>     .start:
+     8 00000000 ????                <2>     .xpixel:            resw 1      
+     9 00000002 ????                <2>     .ypixel:            resw 1       
+    10 00000004 ??                  <2>     .byte_per_pixel:    resb 1     
+    11 00000005 ????????????????    <2>     .video_framebuffer: resq 1
+    12                              <2>     .end:
+    13                              <2> endstruc
+    14                              <2> video_info_ptr:
+    15                              <2>     istruc video_info
+    16 00000175 0000                <2>         at video_info.xpixel, dw 0
+    17 00000177 0000                <2>         at video_info.ypixel, dw 0
+    18 00000179 00                  <2>         at video_info.byte_per_pixel, db 0
+    19 0000017A 0000000000000000    <2>         at video_info.video_framebuffer, dq 0
+    20                              <2>     iend
+    21                              <2> ;argb
+    22                              <2> video_init:
+    23 00000182 48BE128200000080FF- <2>     mov rsi,KernelSpaceUpperAddress + VBEModeStructBufferAddr + vbe_mode_info_block.x_resolution
+    23 0000018B FF                  <2>
+    24 0000018C BB00000000          <2>     mov rbx,0
+    25 00000191 668B1E              <2>     mov  bx, word [rsi]
+    26 00000194 66891DDAFFFFFF      <2>     mov word [rel video_info_ptr + video_info.xpixel],bx
+    27                              <2> 
+    28 0000019B 48BE148200000080FF- <2>     mov rsi,KernelSpaceUpperAddress + VBEModeStructBufferAddr + vbe_mode_info_block.y_resolution
+    28 000001A4 FF                  <2>
+    29 000001A5 BB00000000          <2>     mov rbx,0
+    30 000001AA 668B1E              <2>     mov  bx, word [rsi]
+    31 000001AD 66891DC3FFFFFF      <2>     mov word [rel video_info_ptr + video_info.ypixel],bx
+    32                              <2> 
+    33 000001B4 48BE198200000080FF- <2>     mov rsi,KernelSpaceUpperAddress + VBEModeStructBufferAddr + vbe_mode_info_block.bits_per_pixel
+    33 000001BD FF                  <2>
+    34 000001BE BB00000000          <2>     mov rbx,0
+    35 000001C3 8A1E                <2>     mov bl, byte [rsi]
+    36 000001C5 C0EB03              <2>     shr bl,3
+    37 000001C8 881DABFFFFFF        <2>     mov byte [rel video_info_ptr + video_info.byte_per_pixel],bl
+    38                              <2> 
+    39                              <2>     ; mov rsi,KernelSpaceUpperAddress + VBEModeStructBufferAddr + vbe_mode_info_block.y_resolution
+    40                              <2>     ; mov rbx,0
+    41                              <2>     ; mov  bx, word [rsi]
+    42 000001CE 48BE000000030080FF- <2>     mov rsi,VideoFrameBufferAddress
+    42 000001D7 FF                  <2>
+    43 000001D8 4889359BFFFFFF      <2>     mov qword [rel video_info_ptr + video_info.video_framebuffer],rsi
+    44                              <2> 
+    45 000001DF C3                  <2>     ret
+    46                              <2> 
+    47                              <2> draw_pixel:; Input: rdi = x, rsi = y, rdx = color
+    48                              <2> 
+    49                              <2>     prolog 2;
+    24 000001E0 55                  <3>  push rbp
+    25 000001E1 4889E5              <3>  mov rbp, rsp
+    26                              <3> 
+    27 000001E4 B802000000          <3>  mov rax, %1
+    28 000001E9 4883C00F            <3>  add rax, 15
+    29 000001ED 4883E0F0            <3>  and rax, ~15
+    30 000001F1 4829C4              <3>  sub rsp, rax
+    31                              <3> 
+    32 000001F4 4157                <3>  push r15
+    33 000001F6 4156                <3>  push r14
+    34 000001F8 4155                <3>  push r13
+    35 000001FA 4154                <3>  push r12
+    36 000001FC 4153                <3>  push r11
+    37 000001FE 4152                <3>  push r10
+    38 00000200 4151                <3>  push r9
+    39 00000202 4150                <3>  push r8
+    40 00000204 57                  <3>  push rdi
+    41 00000205 56                  <3>  push rsi
+    42 00000206 52                  <3>  push rdx
+    43 00000207 51                  <3>  push rcx
+    44 00000208 53                  <3>  push rbx
+    45 00000209 50                  <3>  push rax
+    46                              <3> 
+    47                              <3> 
+    48                              <3> 
+    49                              <3> 
+    50                              <3> 
+    50                              <2>     get_param rdi, 1   ; a
+    75 0000020A 488B7D10            <3>  mov %1, [rbp + PARAM_OFFSET + 8*(%2-1)]
+    51                              <2>     get_param rsi, 2   ; b
+    75 0000020E 488B7518            <3>  mov %1, [rbp + PARAM_OFFSET + 8*(%2-1)]
+    52                              <2>     get_param rdx, 3   ; c
+    75 00000212 488B5520            <3>  mov %1, [rbp + PARAM_OFFSET + 8*(%2-1)]
+    53 00000216 52                  <2>     push rdx
+    54                              <2>     ; mov []
+    55 00000217 488D1D57FFFFFF      <2>     lea rbx, [rel video_info_ptr] ; Load video info structure address
+    56                              <2> 
+    57                              <2> 
+    58                              <2> 
+    59                              <2>     ; Calculate pixel offset
+    60 0000021E B800000000          <2>     mov rax,0
+    61 00000223 480FB703            <2>     movzx rax, word [rbx + video_info.xpixel] ; Screen width
+    62                              <2> 
+    63 00000227 48F7E6              <2>     mul rsi                                 ; y * screen width
+    64                              <2>         ; jmp $
+    65 0000022A 4801F8              <2>     add rax, rdi                             ; Add x
+    66 0000022D 480FB64B04          <2>     movzx rcx, byte [rbx + video_info.byte_per_pixel] ; Bytes per pixel
+    67 00000232 480FAFC1            <2>     imul rax, rcx                          ; Offset = (y * width + x) * bytes_per_pixel
+    68                              <2> 
+    69                              <2>     ; Write color to framebuffer
+    70 00000236 488B5B05            <2>     mov rbx, qword [rbx + video_info.video_framebuffer] ; Framebuffer address
+    71 0000023A 4801C3              <2>     add rbx, rax                          ; rbx = framebuffer + offset
+    72                              <2> 
+    73 0000023D 5A                  <2>     pop rdx
+    74 0000023E 8913                <2>     mov dword [rbx], edx                        ; Write color (assumes 32-bit color)
+    75                              <2> 
+    76                              <2>         ; jmp $
+    77                              <2>     set_ret_param rax,4
+    79 00000240 48894528            <3>  mov [rbp + PARAM_OFFSET + 8*(%2-1)], %1
+    78                              <2>     epilog
+    54 00000244 58                  <3>  pop rax
+    55 00000245 5B                  <3>  pop rbx
+    56 00000246 59                  <3>  pop rcx
+    57 00000247 5A                  <3>  pop rdx
+    58 00000248 5E                  <3>  pop rsi
+    59 00000249 5F                  <3>  pop rdi
+    60 0000024A 4158                <3>  pop r8
+    61 0000024C 4159                <3>  pop r9
+    62 0000024E 415A                <3>  pop r10
+    63 00000250 415B                <3>  pop r11
+    64 00000252 415C                <3>  pop r12
+    65 00000254 415D                <3>  pop r13
+    66 00000256 415E                <3>  pop r14
+    67 00000258 415F                <3>  pop r15
+    68                              <3> 
+    69 0000025A 4889EC              <3>  mov rsp, rbp
+    70 0000025D 5D                  <3>  pop rbp
+    71 0000025E C3                  <3>  ret
+    79                              <2> 
+    80                              <2> draw_line:; Input: rdi = x1, rsi = y1, rdx = x2, rcx = y2, r8 = color
+    81 0000025F 53                  <2>     push rbx
+    82 00000260 4151                <2>     push r9
+    83 00000262 4152                <2>     push r10
+    84 00000264 4153                <2>     push r11
+    85                              <2> 
+    86                              <2>     ; Calculate dx = abs(x2 - x1)
+    87 00000266 4989D1              <2>     mov r9, rdx          ; r9 = x2
+    88 00000269 4929F9              <2>     sub r9, rdi          ; r9 = x2 - x1
+    89 0000026C 4D89CA              <2>     mov r10, r9          ; r10 = dx
+    90 0000026F 4D85C9              <2>     test r9, r9
+    91 00000272 7D03                <2>     jge .dx_positive
+    92 00000274 49F7DA              <2>     neg r10              ; dx = abs(dx)
+    93                              <2>     .dx_positive:
+    94                              <2> 
+    95                              <2>         ; Calculate dy = abs(y2 - y1)
+    96 00000277 4989CB              <2>         mov r11, rcx         ; r11 = y2
+    97 0000027A 4929F3              <2>         sub r11, rsi         ; r11 = y2 - y1
+    98 0000027D 4D89D9              <2>         mov r9, r11          ; r9 = dy
+    99 00000280 4D85DB              <2>         test r11, r11
+   100 00000283 7D03                <2>         jge .dy_positive
+   101 00000285 49F7D9              <2>         neg r9               ; dy = abs(dy)
+   102                              <2>     .dy_positive:
+   103                              <2> 
+   104                              <2>         ; Determine the direction of the line
+   105 00000288 41BA01000000        <2>         mov r10, 1          ; x_step = 1
+   106 0000028E 4885D2              <2>         test rdx, rdx
+   107 00000291 7D07                <2>         jge .x_step_positive
+   108 00000293 49C7C2FFFFFFFF      <2>         mov r10, -1         ; x_step = -1
+   109                              <2>     .x_step_positive:
+   110                              <2> 
+   111 0000029A 41BB01000000        <2>         mov r11, 1          ; y_step = 1
+   112 000002A0 4885C9              <2>         test rcx, rcx
+   113 000002A3 7D07                <2>         jge .y_step_positive
+   114 000002A5 49C7C3FFFFFFFF      <2>         mov r11, -1         ; y_step = -1
+   115                              <2>     .y_step_positive:
+   116                              <2> 
+   117                              <2>         ; Initialize error term
+   118 000002AC 4D39D1              <2>         cmp r9, r10          ; Compare dx and dy
+   119 000002AF 7E08                <2>         jle .steep_line
+   120                              <2>         ; Non-steep line (dx > dy)
+   121 000002B1 4D89D0              <2>         mov r8, r10         ; error = dx / 2
+   122 000002B4 49D1E8              <2>         shr r8, 1
+   123 000002B7 EB06                <2>         jmp .draw_line_loop
+   124                              <2>     .steep_line:
+   125                              <2>         ; Steep line (dy >= dx)
+   126 000002B9 4D89C8              <2>         mov r8, r9          ; error = dy / 2
+   127 000002BC 49D1E8              <2>         shr r8, 1
+   128                              <2> 
+   129                              <2>     .draw_line_loop:
+   130                              <2>         ; Draw the current pixel
+   131 000002BF 4889FF              <2>         mov rdi, rdi         ; x
+   132 000002C2 4889F6              <2>         mov rsi, rsi         ; y
+   133 000002C5 4C89C2              <2>         mov rdx, r8          ; color
+   134 000002C8 E813FFFFFF          <2>         call draw_pixel
+   135                              <2> 
+   136                              <2>         ; Check if we've reached the end
+   137 000002CD 4839D7              <2>         cmp rdi, rdx         ; x == x2?
+   138 000002D0 7505                <2>         jne .update_x
+   139 000002D2 4839CE              <2>         cmp rsi, rcx         ; y == y2?
+   140 000002D5 742B                <2>         je .done
+   141                              <2> 
+   142                              <2>     .update_x:
+   143                              <2>         ; Update x and y based on the error term
+   144 000002D7 4D39D1              <2>         cmp r9, r10          ; Steep or non-steep line?
+   145 000002DA 7E13                <2>         jle .update_steep
+   146                              <2>         ; Non-steep line
+   147 000002DC 4D01C8              <2>         add r8, r9          ; error += dy
+   148 000002DF 4D39D0              <2>         cmp r8, r10         ; error >= dx?
+   149 000002E2 7C06                <2>         jl .update_x_only
+   150 000002E4 4D29D0              <2>         sub r8, r10         ; error -= dx
+   151 000002E7 4C01DE              <2>         add rsi, r11         ; y += y_step
+   152                              <2>     .update_x_only:
+   153 000002EA 4C01D7              <2>         add rdi, r10         ; x += x_step
+   154 000002ED EBD0                <2>         jmp .draw_line_loop
+   155                              <2> 
+   156                              <2>     .update_steep:
+   157                              <2>         ; Steep line
+   158 000002EF 4D01D0              <2>         add r8, r10         ; error += dx
+   159 000002F2 4D39C8              <2>         cmp r8, r9          ; error >= dy?
+   160 000002F5 7C06                <2>         jl .update_y_only
+   161 000002F7 4D29C8              <2>         sub r8, r9          ; error -= dy
+   162 000002FA 4C01D7              <2>         add rdi, r10         ; x += x_step
+   163                              <2>     .update_y_only:
+   164 000002FD 4C01DE              <2>         add rsi, r11         ; y += y_step
+   165 00000300 EBBD                <2>         jmp .draw_line_loop
+   166                              <2> 
+   167                              <2>     .done:
+   168 00000302 415B                <2>         pop r11
+   169 00000304 415A                <2>         pop r10
+   170 00000306 4159                <2>         pop r9
+   171 00000308 5B                  <2>         pop rbx
+   172 00000309 C3                  <2>         ret
+   173                              <2> 
+   174                              <2> draw_rect:
+   175 0000030A C3                  <2>     ret
+   176                              <2> 
+   177                              <2> draw_screen:
+   178 0000030B C3                  <2>     ret
+   179                              <2> 
+   180                              <2> fill_screen:
+   181 0000030C C3                  <2>     ret
+   182                              <2> ;-------------------------------------------------
+   183                              <2> draw_circle:
+   184 0000030D C3                  <2>     ret
+   185                              <2> draw_triangle:
+   186 0000030E C3                  <2>     ret
+   187                              <2> 
+   188                              <2> 
+   189                              <2> 
+   190                              <2> %endif
+     6                              <1>     
+     7                              <1> [BITS 64]
+     8                              <1>     ; struc cursor_info
+     9                              <1>     ;     .print_xpixel:            resw 1      
+    10                              <1>     ;     .print_ypixel:            resw 1       
+    11                              <1>     ;     .current_xpixel:          resw 1      
+    12                              <1>     ;     .current_ypixel:          resw 1
+    13                              <1>     ; endstruc
+    14                              <1>     ; cursor_info_ptr:
+    15                              <1>     ;     istruc cursor_info
+    16                              <1>     ;         at cursor_info.print_xpixel, dw 0
+    17                              <1>     ;         at cursor_info.print_ypixel, dw 0
+    18                              <1>     ;         at cursor_info.current_xpixel, dw 0
+    19                              <1>     ;         at cursor_info.current_ypixel, dw 0
+    20                              <1>     ;     iend
+    21                              <1> 
+    22                              <1>     ; struc font_info
+    23                              <1>     ;     .font_base_address:    resq 1
+    24                              <1>     ;     .font_size:            resq 1
+    25                              <1>     ;     .font_width:           resq 1
+    26                              <1>     ;     .font_height:          resq 1
+    27                              <1>     ; endstruc
+    28                              <1>     ; font_info_ptr:
+    29                              <1>     ;     istruc font_info
+    30                              <1>     ;         at font_info.font_base_address, dq 0
+    31                              <1>     ;         at font_info.font_size, dq 0
+    32                              <1>     ;         at font_info.font_width, dq 0
+    33                              <1>     ;         at font_info.font_height, dq 0
+    34                              <1>     ;     iend
+    35                              <1> 
+    36                              <1> struc print_info
+    37 00000000 ????                <1>     .cursor_current_xpixel:     resw 1
+    38 00000002 ????                <1>     .cursor_current_ypixel:     resw 1
+    39 00000004 ????                <1>     .cursor_print_xpixel:       resw 1
+    40 00000006 ????                <1>     .cursor_print_ypixel:       resw 1
+    41 00000008 ????                <1>     .cursor_current_line:       resw 1
+    42 0000000A ????                <1>     .cursor_print_line:         resw 1
+    43                              <1> 
+    44 0000000C ????????????????    <1>     .font_base_address:         resq 1
+    45 00000014 ????                <1>     .font_size:                 resw 1
+    46 00000016 ????                <1>     .font_width:                resw 1
+    47 00000018 ????                <1>     .font_height:               resw 1
+    48                              <1> 
+    49 0000001A ????                <1>     .pixel_line_start:          resw 1
+    50 0000001C ????                <1>     .pixel_per_line:            resw 1 
+    51                              <1> 
+    52 0000001E ????                <1>     .default_color:             resw 1
+    53 00000020 ????                <1>     .current_color:             resw 1
+    54                              <1> endstruc
+    55                              <1> 
+    56                              <1> print_info_ptr:
+    57                              <1>     istruc print_info
+    58 0000030F 0000                <1>         at print_info.cursor_current_xpixel, dw 0
+    59 00000311 0000                <1>         at print_info.cursor_current_ypixel, dw 0
+    60 00000313 0000                <1>         at print_info.cursor_print_xpixel, dw 0
+    61 00000315 0000                <1>         at print_info.cursor_print_ypixel, dw 0
+    62 00000317 0000                <1>         at print_info.cursor_current_line, dw 0
+    63 00000319 0000                <1>         at print_info.cursor_print_line, dw 0
+    64                              <1> 
+    65 0000031B 0000000000000000    <1>         at print_info.font_base_address, dq 0
+    66 00000323 0000                <1>         at print_info.font_size, dw 0
+    67 00000325 0000                <1>         at print_info.font_width, dw 0
+    68 00000327 0000                <1>         at print_info.font_height, dw 0
+    69                              <1> 
+    70 00000329 0000                <1>         at print_info.pixel_line_start, dw 0
+    71 0000032B 0000                <1>         at print_info.pixel_per_line, dw 0
+    72                              <1> 
+    73 0000032D 0000                <1>         at print_info.default_color, dw 0
+    74 0000032F 0000                <1>         at print_info.current_color, dw 0
+    75                              <1>     iend
+    76                              <1> 
+    77                              <1> printk_init:
+    78                              <1> 
+    79                              <1>     ; mov rsi,KernelSpaceUpperAddress + VBEModeStructBufferAddr + vbe_mode_info_block.x_resolution
+    80                              <1>     ; mov rbx,0
+    81                              <1>     ; mov  bx, word [rsi]
+    82                              <1>     prolog 0;
+    24 00000331 55                  <2>  push rbp
+    25 00000332 4889E5              <2>  mov rbp, rsp
+    26                              <2> 
+    27 00000335 B800000000          <2>  mov rax, %1
+    28 0000033A 4883C00F            <2>  add rax, 15
+    29 0000033E 4883E0F0            <2>  and rax, ~15
+    30 00000342 4829C4              <2>  sub rsp, rax
+    31                              <2> 
+    32 00000345 4157                <2>  push r15
+    33 00000347 4156                <2>  push r14
+    34 00000349 4155                <2>  push r13
+    35 0000034B 4154                <2>  push r12
+    36 0000034D 4153                <2>  push r11
+    37 0000034F 4152                <2>  push r10
+    38 00000351 4151                <2>  push r9
+    39 00000353 4150                <2>  push r8
+    40 00000355 57                  <2>  push rdi
+    41 00000356 56                  <2>  push rsi
+    42 00000357 52                  <2>  push rdx
+    43 00000358 51                  <2>  push rcx
+    44 00000359 53                  <2>  push rbx
+    45 0000035A 50                  <2>  push rax
+    46                              <2> 
+    47                              <2> 
+    48                              <2> 
+    49                              <2> 
+    50                              <2> 
+    83 0000035B 66C705ABFFFFFF0000  <1>     mov word [rel print_info_ptr + print_info.cursor_current_xpixel],0
+    84 00000364 66C705A4FFFFFF0000  <1>     mov word [rel print_info_ptr + print_info.cursor_current_ypixel],0
+    85 0000036D 66C7059DFFFFFF0000  <1>     mov word [rel print_info_ptr + print_info.cursor_print_xpixel],0
+    86 00000376 66C70596FFFFFF0000  <1>     mov word [rel print_info_ptr + print_info.cursor_print_ypixel],0
+    87 0000037F 66C7058FFFFFFF0000  <1>     mov word [rel print_info_ptr + print_info.cursor_current_line],0
+    88 00000388 66C70588FFFFFF0000  <1>     mov word [rel print_info_ptr + print_info.cursor_print_line],0
+    89                              <1> 
+    90 00000391 48BE005210000080FF- <1>     mov rsi,0xFFFF800000105200
+    90 0000039A FF                  <1>
+    91 0000039B 48893579FFFFFF      <1>     mov qword [rel print_info_ptr + print_info.font_base_address],rsi
+    92 000003A2 66C70578FFFFFF1000  <1>     mov word [rel print_info_ptr + print_info.font_size],16
+    93 000003AB 66C70571FFFFFF0800  <1>     mov word [rel print_info_ptr + print_info.font_width],8
+    94 000003B4 66C7056AFFFFFF1000  <1>     mov word [rel print_info_ptr + print_info.font_height],16
+    95                              <1> 
+    96 000003BD 66C70563FFFFFF0400  <1>     mov word [rel print_info_ptr + print_info.pixel_line_start],4
+    97 000003C6 66C7055CFFFFFF1400  <1>     mov word [rel print_info_ptr + print_info.pixel_per_line],20
+    98                              <1> 
+    99                              <1>     ; mov word [rel print_info_ptr + print_info.default_color],0x00FFFFFF
+   100                              <1>     ; mov word [rel print_info_ptr + print_info.current_color],0x00FFFFFF
+   101                              <1> 
+   102                              <1>     epilog
+    54 000003CF 58                  <2>  pop rax
+    55 000003D0 5B                  <2>  pop rbx
+    56 000003D1 59                  <2>  pop rcx
+    57 000003D2 5A                  <2>  pop rdx
+    58 000003D3 5E                  <2>  pop rsi
+    59 000003D4 5F                  <2>  pop rdi
+    60 000003D5 4158                <2>  pop r8
+    61 000003D7 4159                <2>  pop r9
+    62 000003D9 415A                <2>  pop r10
+    63 000003DB 415B                <2>  pop r11
+    64 000003DD 415C                <2>  pop r12
+    65 000003DF 415D                <2>  pop r13
+    66 000003E1 415E                <2>  pop r14
+    67 000003E3 415F                <2>  pop r15
+    68                              <2> 
+    69 000003E5 4889EC              <2>  mov rsp, rbp
+    70 000003E8 5D                  <2>  pop rbp
+    71 000003E9 C3                  <2>  ret
+   103                              <1> 
+   104                              <1> printk:
+   105                              <1> 
+   106 000003EA C3                  <1>     ret
+   107                              <1> putc: ; input: rbx=char,rdi=vga_address ;draw a character
+   108 000003EB 4831C0              <1>     xor rax, rax
+   109 000003EE 88D8                <1>     mov al, bl
+   110 000003F0 48C1E004            <1>     shl rax, 4                 ; 乘以16(每个字符16字节)
+   111                              <1> 
+   112 000003F4 56                  <1>     push rsi
+   113 000003F5 488B351FFFFFFF      <1>     mov rsi, [rel print_info_ptr + print_info.font_base_address]
+   114 000003FC 4801C6              <1>     add rsi, rax         ; RSI = 字符数据地址
+   115 000003FF 4889F0              <1>     mov rax,rsi
+   116 00000402 4889C3              <1>     mov rbx,rax
+   117 00000405 5E                  <1>     pop rsi
+   118 00000406 B910000000          <1>     mov rcx, 16                ; 16行高度
+   119 0000040B 57                  <1>     push rdi               ; 保存当前行起始位置
+   120                              <1>     .next_line:
+   121 0000040C 57                  <1>         push rdi               ; 保存当前行起始位置
+   122                              <1>         
+   123                              <1>         ; 处理一行(8像素)
+   124 0000040D 8A13                <1>         mov dl, [rbx]          ; 获取字模数据
+   125 0000040F B608                <1>         mov dh, 8              ; 8位/行
+   126                              <1>         .next_pixel:
+   127 00000411 4831C0              <1>             xor rax,rax
+   128 00000414 8A055FFDFFFF        <1>             mov al,byte [rel video_info_ptr + video_info.byte_per_pixel]
+   129                              <1> 
+   130 0000041A F6C280              <1>             test dl, 0x80       ; 测试最高位
+   131 0000041D 7413                <1>             jz .skip_pixel
+   132                              <1> 
+   133                              <1> 
+   134 0000041F 3C04                <1>             cmp al,4
+   135 00000421 7208                <1>             jb .pixel_2byte
+   136 00000423 C64702FF            <1>             mov byte [rdi+2], 0xFF ; 绘制像素(白色)
+   137 00000427 C6470300            <1>             mov byte [rdi+3], 0x00 ; 绘制像素(白色)
+   138                              <1>             .pixel_2byte:
+   139 0000042B C607FF              <1>                 mov byte [rdi], 0xFF ; 绘制像素(白色)
+   140 0000042E C64701FF            <1>                 mov byte [rdi+1], 0xFF ; 绘制像素(白色)
+   141                              <1>             ; jmp $
+   142                              <1>         .skip_pixel:
+   143 00000432 D0E2                <1>             shl dl, 1           ; 移到下一位
+   144 00000434 4801C7              <1>             add rdi,rax
+   145 00000437 FECE                <1>             dec dh
+   146 00000439 75D6                <1>             jnz .next_pixel
+   147                              <1>         
+   148 0000043B 5F                  <1>         pop rdi                 ; 恢复行起始位置
+   149 0000043C 4831C0              <1>         xor rax,rax
+   150 0000043F 668B052FFDFFFF      <1>         mov ax,word [rel video_info_ptr + video_info.xpixel]
+   151                              <1> 
+   152 00000446 4989D8              <1>         mov r8,rbx
+   153 00000449 BB00000000          <1>         mov rbx,0
+   154 0000044E 8A1D25FDFFFF        <1>         mov bl,byte [rel video_info_ptr + video_info.byte_per_pixel]
+   155 00000454 480FAFC3            <1>         imul rax,rbx
+   156 00000458 4C89C3              <1>         mov rbx,r8
+   157 0000045B 4801C7              <1>         add rdi,rax; 移到下一行(320=屏幕宽度)
+   158                              <1>         ; jmp $
+   159 0000045E 48FFC3              <1>         inc rbx                 ; 下一个字模字节
+   160                              <1> 
+   161 00000461 E2A9                <1>         loop .next_line
+   162                              <1>                 ; jmp $
+   163 00000463 5F                  <1>     pop rdi                 ; 恢复行起始位置
+   164 00000464 C3                  <1>     ret
+   165                              <1> 
+   166                              <1> print:
+   167 00000465 4883F900            <1>     cmp rcx, 0
+   168 00000469 7421                <1>     je .done
+   169 0000046B 53                  <1>     push rbx
+   170 0000046C BBA0000000          <1>     mov rbx,    160
+   171 00000471 48F7E3              <1>     mul rbx
+   172 00000474 4801C7              <1>     add rdi, rax
+   173 00000477 5B                  <1>     pop rbx
+   174                              <1>     .str:
+   175 00000478 8A06                <1>         mov al, [rsi]
+   176 0000047A 8807                <1>         mov [rdi], al
+   177 0000047C 4883C702            <1>         add rdi,2
+   178 00000480 48FFC6              <1>         inc rsi
+   179 00000483 48FFC9              <1>         dec rcx
+   180 00000486 4883F900            <1>         cmp rcx, 0
+   181 0000048A 75EC                <1>         jne .str
+   182                              <1>     .done:
+   183 0000048C C3                  <1>         ret
+   184                              <1> 
+   185                              <1> print_hex_str:
+   186 0000048D 4883F900            <1>     cmp rcx, 0
+   187 00000491 743D                <1>     je .done
+   188                              <1> 
+   189 00000493 50                  <1>     push rax
+   190 00000494 B880070000          <1>     mov rax,    1920
+   191 00000499 48F7E3              <1>     mul rbx
+   192 0000049C 4889C3              <1>     mov rbx,rax
+   193 0000049F 58                  <1>     pop rax
+   194 000004A0 4801D8              <1>     add rax ,rbx
+   195 000004A3 4889C3              <1>     mov rbx,rax
+   196                              <1> 
+   197 000004A6 B804000000          <1>     mov rax,4
+   198 000004AB 48F7E3              <1>     mul rbx
+   199 000004AE 4801C7              <1>     add rdi, rax
+   200                              <1> 
+   201                              <1>     .str:
+   202 000004B1 51                  <1>         push rcx
+   203 000004B2 E81A000000          <1>         call print_hex_byte
+   204                              <1> 
+   205 000004B7 48FFC6              <1>         inc rsi
+   206 000004BA E812000000          <1>         call print_hex_byte
+   207                              <1>                 ; jmp $
+   208 000004BF 48FFC6              <1>         inc rsi
+   209 000004C2 4883C720            <1>         add rdi,32
+   210 000004C6 59                  <1>         pop rcx
+   211 000004C7 48FFC9              <1>         dec rcx
+   212 000004CA 4883F900            <1>         cmp rcx, 0
+   213 000004CE 75E1                <1>         jne .str
+   214                              <1>     .done:
+   215 000004D0 C3                  <1>         ret
+   216                              <1> print_hex_byte:
+   217 000004D1 4831C0              <1>         xor rax,rax
+   218 000004D4 4831DB              <1>         xor rbx,rbx
+   219 000004D7 8A1E                <1>         mov bl, [rsi]
+   220                              <1>         .h4:
+   221 000004D9 88D8                <1>             mov al, bl
+   222 000004DB C0E804              <1>             shr al, 4
+   223                              <1> 
+   224 000004DE 3C0A                <1>             cmp al, 10
+   225 000004E0 7C02                <1>             jl .digit_h4
+   226 000004E2 0407                <1>             add al, 'A'-'0'-10   ; 转换为A-F
+   227                              <1>             .digit_h4:
+   228 000004E4 0430                <1>                 add al, '0'          ; 转换为0-9
+   229 000004E6 88C3                <1>                 mov bl, al
+   230 000004E8 E8FEFEFFFF          <1>                 call putc
+   231                              <1>                 ; mov [rdi], al
+   232                              <1>                 ; add rdi,2
+   233 000004ED 4883C720            <1>                 add rdi,32
+   234                              <1> 
+   235                              <1>         .l4:
+   236 000004F1 4831C0              <1>                 xor rax,rax
+   237 000004F4 4831DB              <1>         xor rbx,rbx
+   238 000004F7 8A1E                <1>         mov bl, [rsi]
+   239 000004F9 88D8                <1>             mov al, bl
+   240 000004FB 240F                <1>             and al, 0x0F
+   241 000004FD 3C0A                <1>             cmp al, 10
+   242 000004FF 7C02                <1>             jl .digit_l4
+   243 00000501 0407                <1>             add al, 'A'-'0'-10   ; 转换为A-F
+   244                              <1>             .digit_l4:
+   245 00000503 0430                <1>                 add al, '0'          ; 转换为0-9
+   246 00000505 88C3                <1>                 mov bl, al
+   247 00000507 E8DFFEFFFF          <1>                 call putc
+   248 0000050C 4883C720            <1>                 add rdi,32
+   249                              <1>                 ; mov [rdi], al
+   250                              <1>                 ; add rdi,2
+   251 00000510 C3                  <1>         ret
+   252                              <1> 
+   253                              <1> 
+   254                              <1> 
+   255                              <1> 
+   256                              <1> draw_string:; input: x,y,string; draw string
+   257                              <1> 
+   258 00000511 B800000000          <1>     mov rax, 0
+   259 00000516 4C89C8              <1>     mov rax, r9
+   260 00000519 BB00000000          <1>     mov rbx,0
+   261 0000051E 668B1D50FCFFFF      <1>     mov bx,word [rel video_info_ptr + video_info.xpixel]
+   262 00000525 480FAFC3            <1>     imul rax,rbx
+   263 00000529 4C01C0              <1>     add rax, r8
+   264 0000052C BB00000000          <1>     mov rbx,0
+   265 00000531 8A1D42FCFFFF        <1>     mov bl,byte [rel video_info_ptr + video_info.byte_per_pixel]
+   266 00000537 480FAFC3            <1>     imul rax,rbx
+   267                              <1>     ; jmp $
+   268 0000053B 48BF000000030080FF- <1>     mov rdi, 0xFFFF800003000000 ; 帧缓冲区起始地址
+   268 00000544 FF                  <1>
+   269 00000545 4801C7              <1>     add rdi, rax
+   270 00000548 B800000000          <1>     mov rax,0
+   271                              <1>     ; jmp $
+   272                              <1>     .next_char:
+   273 0000054D AC                  <1>         lodsb                  
+   274 0000054E 84C0                <1>         test al, al
+   275                              <1>         ; jmp $
+   276 00000550 7420                <1>         jz .done
+   277 00000552 BB00000000          <1>         mov rbx, 0
+   278 00000557 88C3                <1>         mov bl, al
+   279                              <1> 
+   280 00000559 E88DFEFFFF          <1>         call putc  
+   281 0000055E BB00000000          <1>         mov rbx,0
+   282 00000563 8A1D10FCFFFF        <1>         mov bl,byte [rel video_info_ptr + video_info.byte_per_pixel]
+   283 00000569 486BDB08            <1>         imul rbx,8        
+   284 0000056D 4801DF              <1>         add rdi, rbx
+   285                              <1>                 
+   286 00000570 EBDB                <1>         jmp .next_char
+   287                              <1>     .done:
+   288 00000572 C3                  <1>     ret
+   289                              <1> 
+   290                              <1> 
+   291                              <1> print_string:
+   292 00000573 4801C7              <1>     add rdi, rax
+   293                              <1>     .str:
+   294 00000576 8A06                <1>         mov al, [rsi]
+   295 00000578 3C00                <1>         cmp al, 0
+   296 0000057A 740B                <1>         je .done
+   297 0000057C 8807                <1>         mov [rdi], al
+   298 0000057E 4883C702            <1>         add rdi,2
+   299 00000582 48FFC6              <1>         inc rsi
+   300 00000585 EBEF                <1>         jmp .str
+   301                              <1>     .done:
+   302 00000587 C3                  <1>         ret
+   303                              <1> 
+   304                              <1> %endif
+    93                                  
+    94 00000588 68656C6C6F20776F72-     messages: db 'hello world,here to show printk function', 0
+    94 00000591 6C642C686572652074-
+    94 0000059A 6F2073686F77207072-
+    94 000005A3 696E746B2066756E63-
+    94 000005AC 74696F6E00         
+    95 000005B1 617364666768696A6B-     messages1: db 'asdfghijklmnopqrstuvwxyz_ASDFGHJKLZXCVBNM1234567890', 0
+    95 000005BA 6C6D6E6F7071727374-
+    95 000005C3 75767778797A5F4153-
+    95 000005CC 444647484A4B4C5A58-
+    95 000005D5 4356424E4D31323334-
+    95 000005DE 35363738393000     
+    96 000005E5 496D61676520666F72-     messages2: db 'Image format was not specified for ./hd60m.img and probing guessed raw', 0
+    96 000005EE 6D617420776173206E-
+    96 000005F7 6F7420737065636966-
+    96 00000600 69656420666F72202E-
+    96 00000609 2F686436306D2E696D-
+    96 00000612 6720616E642070726F-
+    96 0000061B 62696E672067756573-
+    96 00000624 7365642072617700   
+    97 0000062C 4175746F6D61746963-     messages3: db 'Automatically detecting the format is dangerous for raw images, write operations on block 0 will be restricted.', 0
+    97 00000635 616C6C792064657465-
+    97 0000063E 6374696E6720746865-
+    97 00000647 20666F726D61742069-
+    97 00000650 732064616E6765726F-
+    97 00000659 757320666F72207261-
+    97 00000662 7720696D616765732C-
+    97 0000066B 207772697465206F70-
+    97 00000674 65726174696F6E7320-
+    97 0000067D 6F6E20626C6F636B20-
+    97 00000686 302077696C6C206265-
+    97 0000068F 207265737472696374-
+    97 00000698 65642E00           
+    98                                  
+    99 0000069C 2E2E2F6B65726E656C-     messages4: db '../kernel/printk.asm:100: warning: word data exceeds bounds [-w+number-overflow]', 0
+    99 000006A5 2F7072696E746B2E61-
+    99 000006AE 736D3A3130303A2077-
+    99 000006B7 61726E696E673A2077-
+    99 000006C0 6F7264206461746120-
+    99 000006C9 657863656564732062-
+    99 000006D2 6F756E6473205B2D77-
+    99 000006DB 2B6E756D6265722D6F-
+    99 000006E4 766572666C6F775D00 
+   100 000006ED 5741524E494E473A20-     messages5: db 'WARNING: Image format was not specified for ./hd60m.img and probing guessed raw.', 0
+   100 000006F6 496D61676520666F72-
+   100 000006FF 6D617420776173206E-
+   100 00000708 6F7420737065636966-
+   100 00000711 69656420666F72202E-
+   100 0000071A 2F686436306D2E696D-
+   100 00000723 6720616E642070726F-
+   100 0000072C 62696E672067756573-
+   100 00000735 736564207261772E00 
+   101 0000073E 323530383820627974-     messages6: db '25088 bytes (25 kB, 24 KiB) copied, 0.000134717 s, 186 MB/s', 0
+   101 00000747 657320283235206B42-
+   101 00000750 2C203234204B694229-
+   101 00000759 20636F706965642C20-
+   101 00000762 302E30303031333437-
+   101 0000076B 313720732C20313836-
+   101 00000774 204D422F7300       
+   102                                  
+   103                                  
+   104 0000077A 4523010000000000-       params: times 10 dq 0x12345
+   104 0000077A <rep Ah>           
+   105 000007CA 00<rep Ah>              messagess: times 10 db 0
+   106                                  kernel_end:
+   107                                  section_end:

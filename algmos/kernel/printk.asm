@@ -36,12 +36,10 @@
 struc print_info
     .cursor_current_xpixel:     resw 1
     .cursor_current_ypixel:     resw 1
-    .cursor_current_line:       resw 1
-
     .cursor_print_xpixel:       resw 1
     .cursor_print_ypixel:       resw 1
+    .cursor_current_line:       resw 1
     .cursor_print_line:         resw 1
-    .cursor_print_address:      resq 1
 
     .font_base_address:         resq 1
     .font_size:                 resw 1
@@ -59,12 +57,10 @@ print_info_ptr:
     istruc print_info
         at print_info.cursor_current_xpixel, dw 0
         at print_info.cursor_current_ypixel, dw 0
-        at print_info.cursor_current_line, dw 0
-
         at print_info.cursor_print_xpixel, dw 0
         at print_info.cursor_print_ypixel, dw 0
+        at print_info.cursor_current_line, dw 0
         at print_info.cursor_print_line, dw 0
-        at print_info.cursor_print_address, dq 0
 
         at print_info.font_base_address, dq 0
         at print_info.font_size, dw 0
@@ -84,15 +80,12 @@ printk_init:
     ; mov rbx,0
     ; mov  bx, word [rsi]
     prolog 0;
-
-    mov word [rel print_info_ptr + print_info.cursor_print_xpixel],0
-    mov word [rel print_info_ptr + print_info.cursor_print_ypixel],200
-    mov word [rel print_info_ptr + print_info.cursor_print_line],10
-    mov qword [rel print_info_ptr + print_info.cursor_print_address],0x5DC00
-
     mov word [rel print_info_ptr + print_info.cursor_current_xpixel],0
-    mov word [rel print_info_ptr + print_info.cursor_current_ypixel],0    
-    mov word [rel print_info_ptr + print_info.cursor_current_line],10
+    mov word [rel print_info_ptr + print_info.cursor_current_ypixel],0
+    mov word [rel print_info_ptr + print_info.cursor_print_xpixel],0
+    mov word [rel print_info_ptr + print_info.cursor_print_ypixel],0
+    mov word [rel print_info_ptr + print_info.cursor_current_line],0
+    mov word [rel print_info_ptr + print_info.cursor_print_line],0
 
     mov rsi,0xFFFF800000105200
     mov qword [rel print_info_ptr + print_info.font_base_address],rsi
@@ -108,116 +101,10 @@ printk_init:
 
     epilog
 
-printk:; input: format string,pointer to arguments
-    prolog 2
-    get_param rsi, 1   ; rsi = format string
-    get_param rdx, 2   ; rdx = pointer to arguments
+printk:
 
-    ; mov word [rel print_info_ptr + print_info.cursor_current_xpixel],0
-    ; mov word [rel print_info_ptr + print_info.cursor_current_ypixel],200
-    ; mov word [rel print_info_ptr + print_info.cursor_current_line],10
-    ; mov word [rel print_info_ptr + print_info.cursor_print_line],10
-    ; mov word [rel print_info_ptr + print_info.cursor_print_xpixel],0
-    ; mov word [rel print_info_ptr + print_info.cursor_print_ypixel],200
-
-    mov rax, 0
-    mov ax, word [rel print_info_ptr + print_info.cursor_print_ypixel]
-    mov rbx,0
-    mov bx,word [rel video_info_ptr + video_info.xpixel]
-    imul rax,rbx
-    mov rcx,0
-    mov cx,word [rel print_info_ptr + print_info.cursor_print_xpixel]
-    add rax, rcx
-    mov rbx,0
-    mov bl,byte [rel video_info_ptr + video_info.byte_per_pixel]
-    imul rax,rbx
-    ; jmp $
-    mov rdi, qword [rel video_info_ptr + video_info.video_framebuffer]
-    add rdi, rax
-    mov rax,0
-
-    .next_char:
-        lodsb                  ; Load next character from format string into AL
-        test al, al            ; Check if end of string
-        jz .done
-
-        cmp al, '%'            ; Check for format specifier
-        jne .print_char
-    ; jmp $
-        lodsb                  ; Load format specifier
-        cmp al, 'd'            ; Check for %d
-        je .print_decimal
-        cmp al, 'x'            ; Check for %x
-        je .print_hex
-        cmp al, 's'            ; Check for %s
-        je .print_string
-        jmp .next_char         ; Skip unknown specifier
-
-    .print_char:
-        mov rbx, 0
-        mov bl, al             ; Character to print
-
-        prepare_call 2,1
-        mov qword [rsp+8], rdi
-        mov qword [rsp], rbx
-        call putc
-        cleanup_call 2,1
-        mov rax, [rsp-8]
-
-        mov rbx,0
-        mov bl,byte [rel video_info_ptr + video_info.byte_per_pixel]
-        imul rbx,8        
-        add rdi, rbx
-
-        jmp .next_char
-
-    .print_decimal:
-        push rdx               ; Save argument pointer
-        mov rax, [rdx]         ; Load integer argument
-        add rdx, 8             ; Move to next argument
-        call print_decimal     ; Convert and print integer
-        pop rdx                ; Restore argument pointer
-        jmp .next_char
-
-    .print_hex:
-        push rdx               ; Save argument pointer
-        mov rax, [rdx]         ; Load integer argument
-        add rdx, 8             ; Move to next argument
-        call print_hex         ; Convert and print hexadecimal
-        pop rdx                ; Restore argument pointer
-        jmp .next_char
-
-    .print_string:
-
-
-
-            prepare_call 3,1
-
-    mov rsi, [rdx]         ; Load string pointer
-    mov qword [rsp+16], rsi
-
-    mov qword [rsp+8], 60
-    mov qword [rsp], 0
-    call draw_string
-    cleanup_call 3,1
-    mov rax, [rsp-8]
-
-        push rdx               ; Save argument pointer
-        
-        add rdx, 8             ; Move to next argument
-        call draw_string       ; Print string
-        pop rdx                ; Restore argument pointer
-        jmp .next_char
-
-    .done:
-        epilog
-
+    ret
 putc: ; input: rbx=char,rdi=vga_address ;draw a character
-
-    prolog 2;
-    get_param rbx, 1   ; x
-    get_param rdi, 2   ; y
-
     xor rax, rax
     mov al, bl
     shl rax, 4                 ; 乘以16(每个字符16字节)
@@ -274,7 +161,7 @@ putc: ; input: rbx=char,rdi=vga_address ;draw a character
         loop .next_line
                 ; jmp $
     pop rdi                 ; 恢复行起始位置
-    epilog
+    ret
 
 print:
     cmp rcx, 0
@@ -294,66 +181,7 @@ print:
         jne .str
     .done:
         ret
-print_decimal:
-    push rbx
-    push rcx
-    push rdx
-    xor rbx, rbx
-    mov rbx, 10              ; Base 10
-    xor rcx, rcx             ; Digit counter
 
-    .convert_loop:
-        xor rdx, rdx
-        div rbx              ; Divide rax by 10, remainder in rdx
-        push rdx             ; Save remainder (digit)
-        inc rcx              ; Increment digit counter
-        test rax, rax
-        jnz .convert_loop    ; Repeat until rax == 0
-
-    .print_digits:
-        pop rdx              ; Get digit from stack
-        add dl, '0'          ; Convert to ASCII
-        mov rbx, rdx
-        prepare_call 2, 1
-        mov qword [rsp+8], rdi ; VGA address
-        mov qword [rsp], rbx   ; Character
-        call putc
-        cleanup_call 2, 1
-        loop .print_digits
-
-    pop rdx
-    pop rcx
-    pop rbx
-    ret
-
-print_hex:
-    push rbx
-    push rcx
-    push rdx
-    mov rcx, 16              ; Process 16 digits (64-bit number)
-    .convert_loop:
-        rol rax, 4           ; Rotate left by 4 bits
-        mov dl, al           ; Extract lower nibble
-        and dl, 0x0F         ; Mask to get a single hex digit
-        cmp dl, 10
-        jl .digit
-        add dl, 'A' - 10     ; Convert to 'A'-'F'
-        jmp .output
-    .digit:
-        add dl, '0'          ; Convert to '0'-'9'
-    .output:
-        mov rbx, rdx
-        prepare_call 2, 1
-        mov qword [rsp+8], rdi ; VGA address
-        mov qword [rsp], rbx   ; Character
-        call putc
-        cleanup_call 2, 1
-        loop .convert_loop
-
-    pop rdx
-    pop rcx
-    pop rbx
-    ret
 print_hex_str:
     cmp rcx, 0
     je .done
@@ -425,35 +253,7 @@ print_hex_byte:
 
 
 
-
-
-
-draw_char:; input: x,y,char; draw a character
-    prolog 2;
-    get_param r8, 1   ; x
-    get_param r9, 2   ; y
-    get_param rsi, 3   ; char
-
-    mov rax, 0
-    mov ax, word [rel print_info_ptr + print_info.cursor_print_ypixel]
-    mov rbx,0
-    mov bx,word [rel video_info_ptr + video_info.xpixel]
-    imul rax,rbx
-    mov rcx,0
-    mov cx,word [rel print_info_ptr + print_info.cursor_print_xpixel]
-    add rax, rcx
-    mov rbx,0
-    mov bl,byte [rel video_info_ptr + video_info.byte_per_pixel]
-    imul rax,rbx
-    ; jmp $
-    mov rdi, qword [rel video_info_ptr + video_info.video_framebuffer]
-    add rdi, rax
-    mov rax,0
 draw_string:; input: x,y,string; draw string
-    prolog 2;
-    get_param r8, 1   ; x
-    get_param r9, 2   ; y
-    get_param rsi, 3   ; string
 
     mov rax, 0
     mov rax, r9
@@ -465,7 +265,7 @@ draw_string:; input: x,y,string; draw string
     mov bl,byte [rel video_info_ptr + video_info.byte_per_pixel]
     imul rax,rbx
     ; jmp $
-    mov rdi, qword [rel video_info_ptr + video_info.video_framebuffer]
+    mov rdi, 0xFFFF800003000000 ; 帧缓冲区起始地址
     add rdi, rax
     mov rax,0
     ; jmp $
@@ -477,14 +277,7 @@ draw_string:; input: x,y,string; draw string
         mov rbx, 0
         mov bl, al
 
-        prepare_call 2,1
-        mov qword [rsp+8], rdi
-        mov qword [rsp], rbx
-        call putc
-        cleanup_call 2,1
-        mov rax, [rsp-8]
-
-
+        call putc  
         mov rbx,0
         mov bl,byte [rel video_info_ptr + video_info.byte_per_pixel]
         imul rbx,8        
@@ -492,7 +285,20 @@ draw_string:; input: x,y,string; draw string
                 
         jmp .next_char
     .done:
-    epilog
+    ret
 
+
+print_string:
+    add rdi, rax
+    .str:
+        mov al, [rsi]
+        cmp al, 0
+        je .done
+        mov [rdi], al
+        add rdi,2
+        inc rsi
+        jmp .str
+    .done:
+        ret
 
 %endif
