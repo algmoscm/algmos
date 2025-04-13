@@ -135,7 +135,15 @@ OffsetTmpOfKernelFile	equ	0x0000
 VBEStructBufferAddr	equ	0x8000
 VBEModeStructBufferAddr	equ	0x8200
 MemoryStructBufferAddr	equ	0x8800
+
+
+
 KernelSpaceUpperAddress equ 0xFFFF800000000000
+
+GDTPointerUpperAddr equ 0xFFFF800000104000
+IDTPointerUpperAddr equ 0xFFFF80000010400a
+TSSPointerUpperAddr equ 0xFFFF800000104014
+
 VideoFrameBufferAddress equ 0xFFFF800003000000
 KernelStartSectorNum	equ	16
 

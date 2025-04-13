@@ -10,7 +10,7 @@ struc video_info
     .byte_per_pixel:    resb 1     
     .video_framebuffer: resq 1
     .end:
-endstruc
+    endstruc
 video_info_ptr:
     istruc video_info
         at video_info.xpixel, dw 0
@@ -18,8 +18,8 @@ video_info_ptr:
         at video_info.byte_per_pixel, db 0
         at video_info.video_framebuffer, dq 0
     iend
-;argb
-video_init:
+
+video_init:;ARGB
     prolog 0;
     mov rsi,KernelSpaceUpperAddress + VBEModeStructBufferAddr + vbe_mode_info_block.x_resolution
     mov rbx,0

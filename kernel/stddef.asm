@@ -31,7 +31,6 @@
     %else
         %assign ret_param_count %2 ; 返回参数数量
     %endif
-    
 
     ; 准备调用
     prepare_call param_count, ret_param_count
@@ -39,17 +38,17 @@
     ; 如果有参数，将参数压入栈
     %if param_count > 0
         %assign i 0
+        mov [rsp-8], rax ; 保存返回地址
         %rep param_count
             %rotate 1
             mov rax, %2
-            ; mov rbx, %2
-            ; mov rcx, %3
-            ; jmp $
             mov [rsp + 8*i], rax ; 将参数压入栈
             %assign i i+1
         %endrep
+        ; mov rax,
         %rotate 1
         %rotate 1
+        mov rax,[rsp-8]; 保存返回地址
     %endif
 
     ; 调用函数
@@ -58,65 +57,19 @@
     ; 清理栈空间
     cleanup_call param_count, ret_param_count
 
-    ; %if param_count < 0
-    ;     %assign param_count 0
-    ;     %assign ret_param_count 0
-
-    ;     prepare_call param_count, ret_param_count ; 准备调用
-
-    ;     call %1
-
-    ;     cleanup_call param_count, ret_param_count ; 清理栈空间
-    ; %elseif param_count == 0
-    ;     %assign ret_param_count %2 ; 返回参数数量
-
-    ;     prepare_call param_count, ret_param_count ; 准备调用
-
-    ;     call %1
-
-    ;     cleanup_call param_count, ret_param_count ; 清理栈空间
-    ; %else 
-    ;     %assign ret_param_count %2 ; 返回参数数量
-
-    ;     prepare_call param_count, ret_param_count ; 准备调用
-
-    ;     %assign i 0
-    ;     %rep param_count
-    ;         %rotate -1
-    ;         mov rax, %3
-    ;         mov [rsp + 8*i], rax ; 将参数压入栈
-    ;         %assign i i+1 
-    ;     %endrep
-
-    ;     call %3
-
-    ;     cleanup_call param_count, %4 ; 清理栈空间
-    ; %endif
 %endmacro
 
 %macro prolog 1;local var size(bytes)
     push rbp
     mov rbp, rsp
-
+    mov [rbp-8],rax
     mov rax, %1
     add rax, 15
     and rax, ~15
     sub rsp, rax
-
-    push r15
-    push r14
-    push r13
-    push r12
-    push r11
-    push r10
-    push r9
-    push r8
-    push rdi
-    push rsi
-    push rdx
-    push rcx
-    push rbx
-    push rax
+    mov rax,[rbp-8]
+    pushallq
+    
     
     ; 调试信息可以放在这里
     ; %ifdef DEBUG
@@ -125,20 +78,7 @@
 %endmacro
 
 %macro epilog 0
-    pop rax
-    pop rbx
-    pop rcx
-    pop rdx
-    pop rsi
-    pop rdi
-    pop r8
-    pop r9
-    pop r10
-    pop r11
-    pop r12
-    pop r13
-    pop r14
-    pop r15
+    popallq
 
     mov rsp, rbp
     pop rbp
@@ -171,20 +111,39 @@
     add rsp, total_space
 %endmacro
 
+%macro pushallq 0
+    push rax
+    push rbx
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+    push r8
+    push r9
+    push r10
+    push r11
+    push r12
+    push r13
+    push r14
+    push r15
+%endmacro
 
-; %macro function 1-*;1=function entry offset
-;     prepare_call %0-2,1
-
-;     %assign i %0
-;     %rep i-1
-;         %rotate -1
-;         push %1
-;     %endrep
-;     call %1
-
-;     cleanup_call %0-2,1
-;     ; mov rax,[rsp-8]
-; %endmacro
+%macro popallq 0
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rdi
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+%endmacro
 
 %endif
 ;---------------------ABI Standard------------------;

@@ -53,8 +53,7 @@ struc print_info
 
     .default_color:             resw 1
     .current_color:             resw 1
-endstruc
-
+ endstruc
 print_info_ptr:
     istruc print_info
         at print_info.cursor_current_xpixel, dw 0
@@ -423,6 +422,24 @@ print_hex_byte:
         ret
 
 
+flush_framebuffer:
+    prolog 0;
+    mov rax, 0
+    mov ax, word [rel print_info_ptr + print_info.cursor_print_ypixel]
+    mov rbx,0
+    mov bx,word [rel video_info_ptr + video_info.xpixel]
+    imul rax,rbx
+    mov rcx,0
+    mov cx,word [rel print_info_ptr + print_info.cursor_print_xpixel]
+    add rax, rcx
+    mov rbx,0
+    mov bl,byte [rel video_info_ptr + video_info.byte_per_pixel]
+    imul rax,rbx
+    ; jmp $
+    mov rdi, qword [rel video_info_ptr + video_info.video_framebuffer]
+    add rdi, rax
+    mov rax,0
+    epilog
 
 
 
@@ -433,6 +450,181 @@ draw_char:; input: x,y,char; draw a character
     get_param r8, 1   ; x
     get_param r9, 2   ; y
     get_param rsi, 3   ; char
+
+    mov rax, 0
+    mov rax, r9
+
+    mov rbx,0
+    mov bx,word [rel video_info_ptr + video_info.xpixel]
+    imul rax,rbx
+
+    mov rcx,0
+    mov rcx,r8
+    add rax, rcx
+
+    mov rbx,0
+    mov bl,byte [rel video_info_ptr + video_info.byte_per_pixel]
+    imul rax,rbx
+    ; jmp $
+    mov rdi, qword [rel video_info_ptr + video_info.video_framebuffer]
+    add rdi, rax        ;rdi=屏幕地址
+
+
+    xor rax, rax
+    mov rax,rsi
+
+    shl rax, 4                 ; 乘以16(每个字符16字节)
+    mov rbx, [rel print_info_ptr + print_info.font_base_address]
+    add rbx, rax         ; RSI = 字符数据地址
+    mov rsi,rbx
+
+
+    mov rcx, 16                ; 16行高度
+    push rdi               ; 保存当前行起始位置
+    .next_line:
+        push rdi               ; 保存当前行起始位置
+        
+        ; 处理一行(8像素)
+        mov dl, [rsi]          ; 获取字模数据
+        mov dh, 8              ; 8位/行
+        .next_pixel:
+            xor rax,rax
+            mov al,byte [rel video_info_ptr + video_info.byte_per_pixel]
+
+            test dl, 0x80       ; 测试最高位
+            jz .skip_pixel
+
+
+            cmp al,4
+            jb .pixel_2byte
+            mov byte [rdi+2], 0xFF ; 绘制像素(白色)
+            mov byte [rdi+3], 0x00 ; 绘制像素(白色)
+            .pixel_2byte:
+                mov byte [rdi], 0xFF ; 绘制像素(白色)
+                mov byte [rdi+1], 0xFF ; 绘制像素(白色)
+            ; jmp $
+        .skip_pixel:
+            shl dl, 1           ; 移到下一位
+            add rdi,rax
+            dec dh
+            jnz .next_pixel
+        
+        pop rdi                 ; 恢复行起始位置
+
+        xor rax,rax
+        mov ax,word [rel video_info_ptr + video_info.xpixel]
+
+        mov rbx,0
+        mov bl,byte [rel video_info_ptr + video_info.byte_per_pixel]
+        imul rax,rbx
+        add rdi,rax
+        inc rsi                 ; next char font
+        loop .next_line
+                ; jmp $
+    pop rdi                 ; 恢复行起始位置
+    epilog
+
+
+
+draw_string:; input: x,y,string; draw string
+    prolog 2;
+    get_param r8, 1   ; x
+    get_param r9, 2   ; y
+    get_param rsi, 3   ; string
+
+    ; mov rax, 0
+    ; mov rax, r9
+    ; mov rbx,0
+    ; mov bx,word [rel video_info_ptr + video_info.xpixel]
+    ; imul rax,rbx
+    ; add rax, r8
+
+    ; mov rax, 8
+    ; mov rbx,0
+    ; mov bl,byte [rel video_info_ptr + video_info.byte_per_pixel]
+    ; imul rax,rbx
+
+    ; jmp $
+    ; mov rdi, qword [rel video_info_ptr + video_info.video_framebuffer]
+    ; add rdi, rax
+    ; mov rax,0
+    ; jmp $
+    .next_char:
+        lodsb                  
+        test al, al
+        ; jmp $
+        jz .done
+        mov rbx, 0
+        mov bl, al
+
+        ; prepare_call 2,1
+        ; mov qword [rsp+8], rdi
+        ; mov qword [rsp], rbx
+        ; call putc
+        ; cleanup_call 2,1
+        ; mov rax, [rsp-8]
+
+        function draw_char,1,r8,r9,rbx
+        add r8, 8
+        ; mov rbx,0
+        ; mov bl,byte [rel video_info_ptr + video_info.byte_per_pixel]
+        ; imul rbx,8        
+        ; add rdi, rbx
+                
+        jmp .next_char
+    .done:
+    epilog
+
+draw_hex:; input: x,y,hex; draw hex
+    prolog 2;
+    get_param r8, 1   ; x
+    get_param r9, 2   ; y
+    get_param rsi, 3   ; hex
+
+    mov rbx,'0'
+    function draw_char,1,r8,r9,rbx
+    add r8, 8
+
+    mov rbx, 'x'
+    function draw_char,1,r8,r9,rbx    
+    add r8, 8
+
+
+    xor rax, rax
+    xor rbx, rbx
+    xor rdx, rdx
+    mov rax, [rsi]
+    ; jmp $
+    mov rcx, 16              ; Process 16 digits (64-bit number)
+    .convert_loopqq:
+        rol rax, 4           ; Rotate left by 4 bits
+        ; jmp $
+        mov dl, al           ; Extract lower nibble
+
+        and dl, 0x0F         ; Mask to get a single hex digit
+
+        cmp dl, 10
+        jl .digitqq
+        add dl, 'A' - 10     ; Convert to 'A'-'F'
+        jmp .outputqq
+    .digitqq:
+        add dl, '0'          ; Convert to '0'-'9'
+    .outputqq:
+        mov rbx, rdx
+
+        function draw_char,1,r8,r9,rbx
+        
+        add r8, 8
+        loop .convert_loopqq
+        ; .stop:
+        ; add rcx,0x1000
+        ;     jmp $
+    epilog
+draw_decimal:; input: x,y,dec; draw dec
+    prolog 2;
+    get_param r8, 1   ; x
+    get_param r9, 2   ; y
+    get_param rsi, 3   ; dec
 
     mov rax, 0
     mov ax, word [rel print_info_ptr + print_info.cursor_print_ypixel]
@@ -449,50 +641,5 @@ draw_char:; input: x,y,char; draw a character
     mov rdi, qword [rel video_info_ptr + video_info.video_framebuffer]
     add rdi, rax
     mov rax,0
-draw_string:; input: x,y,string; draw string
-    prolog 2;
-    get_param r8, 1   ; x
-    get_param r9, 2   ; y
-    get_param rsi, 3   ; string
-
-    mov rax, 0
-    mov rax, r9
-    mov rbx,0
-    mov bx,word [rel video_info_ptr + video_info.xpixel]
-    imul rax,rbx
-    add rax, r8
-    mov rbx,0
-    mov bl,byte [rel video_info_ptr + video_info.byte_per_pixel]
-    imul rax,rbx
-    ; jmp $
-    mov rdi, qword [rel video_info_ptr + video_info.video_framebuffer]
-    add rdi, rax
-    mov rax,0
-    ; jmp $
-    .next_char:
-        lodsb                  
-        test al, al
-        ; jmp $
-        jz .done
-        mov rbx, 0
-        mov bl, al
-
-        prepare_call 2,1
-        mov qword [rsp+8], rdi
-        mov qword [rsp], rbx
-        call putc
-        cleanup_call 2,1
-        mov rax, [rsp-8]
-
-
-        mov rbx,0
-        mov bl,byte [rel video_info_ptr + video_info.byte_per_pixel]
-        imul rbx,8        
-        add rdi, rbx
-                
-        jmp .next_char
-    .done:
     epilog
-
-
 %endif

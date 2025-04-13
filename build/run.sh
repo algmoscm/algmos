@@ -12,7 +12,9 @@ dd if=kernel.img of=./hd60m.img bs=512 seek=16 conv=notrunc
 
 rm -rf ./*.bin
 # qemu-system-x86_64 -S -hda ../hd60m.img -monitor stdio
+# -display vnc=127.0.0.1:0,key-delay-ms=0,connections=15000,to=2,lossy=on,non-adaptive=off 
+qemu-system-x86_64 -m 1024M -hda ./hd60m.img -monitor stdio -vga std 
 
-qemu-system-x86_64 -m 1024M -hda ./hd60m.img -monitor stdio -vga std
+# qemu-system-x86_64 -m 1024M -hda ./hd60m.img -vga std
 # qemu-system-x86_64 -m 1024M -hda ./hd60m.img -monitor stdio -vga std -S -s
 

@@ -23,21 +23,6 @@ head_start:
 
     mov	rax,head_kernel + 0xFFFF800000000000
     jmp rax
-
-print_string_64:
-    ; 打印字符串到帧缓冲区
-    mov ah, 0x0F ; 白色前景，黑色背景
-    .next_char:
-        lodsb
-        cmp al, 0
-        je .done
-        stosw        ; 将字符和属性写入帧缓冲区
-        jmp .next_char
-    .done:
-        ret
-
-head_entry_msg db "jump to head entry success!", 0
-
 ;-------------从线性地址0x100000向地址0xFFFF 8000 0010 0000切换的工作---------------
 head_kernel:
 
@@ -48,11 +33,6 @@ head_kernel:
     mov	ss,	ax
     mov	rsp,0xffff800000007E00
 
-	; mov rax,0
-
-	; mov rbx,[rax+struct_ABI_HEADER.entry_point]
-	; add rax,rbx
-    ; jmp	rax
 	mov rdx,0
 	mov rax,section_end-section_start+64
 		; jmp $
@@ -62,7 +42,7 @@ head_kernel:
 	; jmp $
 	add rax,KernelStartSectorNum
 	lea rdi,[rel head_end]
-	; mov eax, KernelStartSectorNum
+
 	mov rbx, rdi                                 ;起始地址
 	; jmp $
 	call read_hard_disk_0                        ;以下读取程序的起始部分（一个扇区）
@@ -79,7 +59,7 @@ head_kernel:
 	xor rdx, rdx
 	mov rcx, 512                                 ;512字节每扇区
 	div rcx
-; jmp $
+
 	or rdx, rdx
 	jnz @1                                       ;未除尽，因此结果比实际扇区数少1
 	dec rax                                      ;已经读了一个扇区，扇区总数减1
@@ -106,9 +86,9 @@ head_kernel:
 	loop @2                                      ;循环读，直到读完整个内核
 
 pge:
-;  ;回填内核加载的位置信息（物理/线性地址）到内核程序头部
-;  mov dword [CORE_PHY_ADDR + 0x08], CORE_PHY_ADDR
-;  mov dword [CORE_PHY_ADDR + 0x0c], 0
+	;  ;回填内核加载的位置信息（物理/线性地址）到内核程序头部
+	;  mov dword [CORE_PHY_ADDR + 0x08], CORE_PHY_ADDR
+	;  mov dword [CORE_PHY_ADDR + 0x0c], 0
 
 
 	mov rax,0x100000
@@ -179,19 +159,19 @@ times 0x1000-($-ehdr) db 0
 
 ;---------------------init page-----------;
 align 8
-Page_Start:
+Page_Start:;init page程序段将前10MB物理内存分别映射到线性地址0处和0xFFFF 8000 0000 0000处,接着把物理地址0xE000 0000开始的16MB内存映射到线性地址0xA0 0000处和0xFFFF 8000 00A0 0000处,最后使用伪指令.fill将数值0填充到页表的剩余499个页表项里
 PML4E:; [ORG  0xFFFF800000101000]
 	dq	0x102007		;0索引,索引出来后低12位补0
     dq  255 dup(0x0000000000000000)
 	dq	0x102007		;256索引,比如线性地址0xFFFF 8000 0010 0000(低21位是2MB物理页的页内偏移)映射到的物理地址是0x10 0000
 	dq  255 dup(0x0000000000000000)
-PDPTE:	;4KB; [ORG  0xFFFF800000102000]	;21~29位索引PDT,0~20位为2MB物理页的页内偏移
+PDPTE:; [ORG  0xFFFF800000102000]	;21~29位索引PDT,0~20位为2MB物理页的页内偏移
 	
 	dq	0x103003		;/* 0x103003 */
 	dq  511 dup(0x0000000000000000)
 
-; [ORG  0xFFFF800000103000]
-PDE:		;4KB
+
+PDE:  ; [ORG  0xFFFF800000103000]
 	dq	0x000083		;0x00 0000
 	dq	0x200083		;0x20 0000
 	dq	0x400083		;0x40 0000
@@ -217,31 +197,41 @@ PDE:		;4KB
     dq  0x2c00083
     dq  0x2e00083
 
-%if DEBUG_PLATFORM == PLATFORM_QEMU_X64
-	dq	0xfd000083		;/*0x 300 0000*/ 115 mode vbe qemu 800*600
-	dq	0xfd200083
-	dq	0xfd400083
-	dq	0xfd600083
-	dq	0xfd800083
-	dq	0xfda00083
-	dq	0xfdc00083
-	dq	0xfde00083
-	dq  480 dup(0x0000000000000000)
-%else
-	dq	0xa0000083		;/*0x 300 0000*/ 115 mode vbe physics 800*600 4byte
-	dq	0xa0200083
-	dq	0xa0400083
-	dq	0xa0600083
-	dq	0xa0800083
-	dq	0xa0a00083
-	dq	0xa0c00083
-	dq	0xa0e00083
-	dq  480 dup(0x0000000000000000)
-%endif
-;init page程序段将前10MB物理内存分别映射到线性地址0处和0xFFFF 8000 0000 0000处,接着把物理地址0xE000 0000开始的16MB内存映射到线性地址0xA0 0000处和0xFFFF 8000 00A0 0000处,最后使用伪指令.fill将数值0填充到页表的剩余499个页表项里
+	%if DEBUG_PLATFORM == PLATFORM_QEMU_X64
+		dq	0xfd000083		;/*0x 300 0000*/ 115 mode vbe qemu 800*600
+		dq	0xfd200083
+		dq	0xfd400083
+		dq	0xfd600083
+		dq	0xfd800083
+		dq	0xfda00083
+		dq	0xfdc00083
+		dq	0xfde00083
+		dq  480 dup(0x0000000000000000)
+	%else
+		dq	0xa0000083		;/*0x 300 0000*/ 115 mode vbe physics 800*600 4byte
+		dq	0xa0200083
+		dq	0xa0400083
+		dq	0xa0600083
+		dq	0xa0800083
+		dq	0xa0a00083
+		dq	0xa0c00083
+		dq	0xa0e00083
+		dq  480 dup(0x0000000000000000)
+	%endif
 
-;----------------------GDT_Table--------------------;
-GDT_Table:
+
+
+GDT_POINTER:; [ORG  0xFFFF800000104000]
+	GDT_LIMIT:	dw	GDT_END - GDT_Table - 1
+	GDT_BASE:	dq	GDT_Table + 0xFFFF800000000000
+IDT_POINTER:; [ORG  0xFFFF80000010400a]
+	IDT_LIMIT:	dw	IDT_END - IDT_Table - 1
+	IDT_BASE:	dq	IDT_Table + 0xFFFF800000000000
+TSS_POINTER:; [ORG  0xFFFF800000104014]
+	; TSS_LIMIT:	dw	TSS_END - TSS_Table - 1
+	TSS_LIMIT:	dw	TSS_END - TSS_Table
+	TSS_BASE:     dq	TSS_Table + 0xFFFF800000000000
+GDT_Table:;----------------------GDT_Table--------------------;
 	dq	0x0000000000000000			;/*0	NULL descriptor		       	00*/
 	dq	0x0020980000000000			;/*1	KERNEL	Code	64-bit	Segment	08*/
 	dq	0x0000920000000000			;/*2	KERNEL	Data	64-bit	Segment	10*/
@@ -249,34 +239,16 @@ GDT_Table:
 	dq	0x0000f20000000000			;/*4	USER	Data	64-bit	Segment	20*/
 	dq	0x00cf9a000000ffff			;/*5	KERNEL	Code	32-bit	Segment	28*/
 	dq	0x00cf92000000ffff			;/*6	KERNEL	Data	32-bit	Segment	30*/
-    dq  10 dup(0x0000000000000000)  ;/*8 ~ 9	TSS (jmp one segment <7>) in long-mode 128-bit 40*/	
-GDT_END:
+    dq  20 dup(0x0000000000000000)  ;/*8 ~ 9	TSS (jmp one segment <7>) in long-mode 128-bit 40*/	
+	GDT_END:
 
-GDT_POINTER:
-GDT_LIMIT:	dw	GDT_END - GDT_Table - 1
-GDT_BASE:	dq	GDT_Table + 0xFFFF800000000000
-
-;----------------------IDT_Table--------------------;
-IDT_Table:
+IDT_Table:;----------------------IDT_Table--------------------;
 	dq  512 dup(0x0000000000000000)
-IDT_END:
+	IDT_END:
 
-IDT_POINTER:
-IDT_LIMIT:	dw	IDT_END - IDT_Table - 1
-IDT_BASE:	dq	IDT_Table + 0xFFFF800000000000
-
-;----------------------TSS64_Table--------------------;
-TSS64_Table:
+TSS_Table:;----------------------TSS64_Table--------------------;
 	dq  13 dup(0x0000000000000000)
-TSS64_END:
-
-TSS64_POINTER:
-TSS64_LIMIT:	dw	TSS64_END - TSS64_Table - 1
-TSS64_BASE:     dq	TSS64_Table + 0xFFFF800000000000
-
-;以下是注释说明:
-;在64位的IA-32e模式下,页表最高可以分为4个等级,而且分页机制除了提供4KB的物理页之外,还提供2MB和1GB的物理页
-;对于拥有大量物理内存的操作系统来说,使用4KB物理页可能会导致页颗粒过于零碎,从而造成频繁的页维护工作,而采用2MB的物理页也许会比4KB更合理
+	TSS_END:
 
 kernel_end:
 times 41*512-($-$$) db 0
