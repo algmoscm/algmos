@@ -5,8 +5,10 @@
 %define USE_CC_STANDARD
 %ifdef USE_CC_STANDARD
 ;caller maintain the stack balance 
-
-
+    ; debug_times: db 0
+    ; cmp byte [rel debug_times],3
+    ; je debug_stop
+    ; add byte [rel debug_times],1
 ; -------------------------------
 ; 栈帧结构定义
 ; -------------------------------

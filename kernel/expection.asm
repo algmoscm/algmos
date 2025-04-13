@@ -114,12 +114,12 @@ setup_default_expection_idt:;setup expection idt 0~31
 
 
 default_exception_handler:;
-    mov rax,0xffff
+    ; mov rax,0xffff
     jmp $
     iretq
 div0_exception_handler:;
-    mov rbx,0x1111
-    ; jmp $
+    ; mov rbx,0x1111
+    jmp $
     push rax
     push rbx
     push rcx
@@ -163,7 +163,7 @@ div0_exception_handler:;
 
     iretq
 debug_exception_handler:;
-    mov rbx,0x2222
+    ; mov rbx,0x2222
     jmp $
     push rax
     push rbx
