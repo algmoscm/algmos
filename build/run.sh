@@ -1,3 +1,28 @@
+
+
+
+
+if [ $# == 0 ]
+then
+        a="%define DEBUG_PLATFORM PLATFORM_QEMU_X64"
+        sed -i "5c $a" ../bootloader/global_def.asm
+
+else
+    if [ $1 == "run" ]
+        then
+
+        a="%define DEBUG_PLATFORM PLATFORM_X64"
+        sed -i "5c $a" ../bootloader/global_def.asm
+
+    else
+        a="%define DEBUG_PLATFORM PLATFORM_QEMU_X64"
+        sed -i "5c $a" ../bootloader/global_def.asm
+
+    fi
+fi
+
+
+
 dd if=/dev/zero of=./hd60m.img bs=512 seek=0 count=100 conv=notrunc
 nasm ../bootloader/boot.asm  -o boot.bin
 nasm ../bootloader/loader.asm  -o loader.bin
@@ -13,8 +38,26 @@ dd if=kernel.img of=./hd60m.img bs=512 seek=16 conv=notrunc
 rm -rf ./*.bin
 # qemu-system-x86_64 -S -hda ../hd60m.img -monitor stdio
 # -display vnc=127.0.0.1:0,key-delay-ms=0,connections=15000,to=2,lossy=on,non-adaptive=off 
-qemu-system-x86_64 -m 1024M -hda ./hd60m.img -monitor stdio -vga std 
 
+if [ $# == 0 ]
+then
+        a="%define DEBUG_PLATFORM PLATFORM_QEMU_X64"
+        sed -i "5c $a" ../bootloader/global_def.asm
+        qemu-system-x86_64 -m 2048M -hda ./hd60m.img -monitor stdio -vga std 
+else
+    if [ $1 == "run" ]
+        then
+
+        a="%define DEBUG_PLATFORM PLATFORM_X64"
+        sed -i "5c $a" ../bootloader/global_def.asm
+
+        sudo dd if=./hd60m.img of=/dev/sda
+    else
+        a="%define DEBUG_PLATFORM PLATFORM_QEMU_X64"
+        sed -i "5c $a" ../bootloader/global_def.asm
+        qemu-system-x86_64 -m 2048M -hda ./hd60m.img -monitor stdio -vga std 
+    fi
+fi
 # qemu-system-x86_64 -m 1024M -hda ./hd60m.img -vga std
 # qemu-system-x86_64 -m 1024M -hda ./hd60m.img -monitor stdio -vga std -S -s
 

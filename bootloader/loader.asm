@@ -7,8 +7,6 @@ loader_Start:
 
 	jmp loader_code_Start
 
-; tttp: db 0x55,0xaa,55,0xaa,55,0xaa,55,0xaa,55,0xaa,55,0xaa,55,0xaa,55,0xaa
-
 GDT32_START:
 LABEL_GDT:			dd	0,0
 LABEL_DESC_CODE32:	dd	0x0000FFFF,0x00CF9A00
@@ -38,7 +36,7 @@ SelectorData64	equ	(LABEL_DESC_DATA64 - LABEL_GDT64)
 
 
 loader_code_Start:
-; jmp $
+
 	mov	ax,	cs
 	mov	ds,	ax
 	mov	es,	ax
@@ -59,7 +57,7 @@ loader_code_Start:
 
 	mov	ax,	1301h
 	mov	bx,	000fh
-	; mov	dx,	0100h		;row 2
+
 	mov	cx,	12
 	push	ax
 	mov	ax,	ds
@@ -68,7 +66,7 @@ loader_code_Start:
 	mov	bp,	StartLoaderMessage
 	int	10h
 
-
+; jmp $
 ;-----------------open address A20------------------;
 	push	ax
 	in	al,	92h
@@ -91,53 +89,53 @@ loader_code_Start:
 	mov	cr0,	eax
 
 	sti
-	; jmp $
-;     ; 设置目标地址为 0x9000
-;     mov ax, BaseTmpOfKernelAddr
-;     mov es, ax     ; ES = 0x9000
-;     xor bx, bx     ; BX = 0x0000
+%if DEBUG_PLATFORM == PLATFORM_X64
+    ; 设置目标地址为 0x9000
+    mov ax, BaseTmpOfKernelAddr
+    mov es, ax     ; ES = 0x9000
+    xor bx, bx     ; BX = 0x0000
 
-;     ; 设置 int 0x13 参数
-;     mov ah, 0x02   ; 功能号：读取扇区
-;     mov al, 52      ; 读取 1 个扇区
-;     mov ch, 0      ; 柱面号 0
-;     mov cl, 17      ; 扇区号 1（LBA 0）
-;     mov dh, 0      ; 磁头号 0
-;     mov dl, 0x80   ; 驱动器号：第一个硬盘
-;     int 0x13       ; 调用 BIOS 中断
+    ; 设置 int 0x13 参数
+    mov ah, 0x02   ; 功能号：读取扇区
+    mov al, 68      ; 读取 1 个扇区
+    mov ch, 0      ; 柱面号 0
+    mov cl, 17      ; 扇区号 1（LBA 0）
+    mov dh, 0      ; 磁头号 0
+    mov dl, 0x80   ; 驱动器号：第一个硬盘
+    int 0x13       ; 调用 BIOS 中断
 
-; 	push	cx
-; 	push	eax
-; 	push	edi
-; 	push	ds
-; 	push	esi
+	push	cx
+	push	eax
+	push	edi
+	push	ds
+	push	esi
 
-; 	mov	cx,	512*52
+	mov	cx,	512*68
 
-; 	mov	edi,OffsetOfKernelFile
+	mov	edi,OffsetOfKernelFile
 
-; 	mov	ax,	BaseTmpOfKernelAddr
-; 	mov	ds,	ax
-; 	mov	esi,OffsetTmpOfKernelFile
+	mov	ax,	BaseTmpOfKernelAddr
+	mov	ds,	ax
+	mov	esi,OffsetTmpOfKernelFile
 
-; Label_Mov_Kernel:
+Label_Mov_Kernel:
 
-; 	mov	al,	byte	[ds:esi]
-; 	mov	byte	[fs:edi],	al
+	mov	al,	byte	[ds:esi]
+	mov	byte	[fs:edi],	al
 
-; 	mov	byte	[ds:esi],	0
+	mov	byte	[ds:esi],	0
 
-; 	inc	esi
-; 	inc	edi
+	inc	esi
+	inc	edi
 
-; 	loop	Label_Mov_Kernel
+	loop	Label_Mov_Kernel
 
-; 	pop	esi
-; 	pop	ds
-; 	pop	edi
-; 	pop	eax
-; 	pop	cx
-
+	pop	esi
+	pop	ds
+	pop	edi
+	pop	eax
+	pop	cx
+%endif
 ;-----------------Get VBE Info Block------------------;
 Get_VBE_Info_Block:
 	mov	ax,	0300h
@@ -419,10 +417,16 @@ Label_Get_Mem_OK:
 	mov	bp,	GetMemStructOKMessage
 	int	10h	
 
+	push es
+	mov	ax,	0x00
+	mov	es,	ax
 
+	mov eax,dword	[MemStructNumber]
+	mov [es:MemoryStructBufferAddr-4], eax
+	pop es
 ;-----------------------set VESA VBE mode------------------------;
 ;=======	clear screen
-
+; jmp $
 	mov	ax,	0600h
 	mov	bx,	0700h
 	mov	cx,	0
@@ -617,7 +621,8 @@ no_support:
 
 [BITS 64]
 long_mode:
-; jmp $
+
+%if DEBUG_PLATFORM == PLATFORM_QEMU_X64
          ;以下加载系统核心程序
          mov edi, OffsetOfKernelFile
 
@@ -662,11 +667,10 @@ long_mode:
         ;  mov dword [CORE_PHY_ADDR + 0x08], CORE_PHY_ADDR
         ;  mov dword [CORE_PHY_ADDR + 0x0c], 0
 
-; jmp $
+%endif
 	mov rax,0x100000
-	; lea rax,[rel head_end]
 	mov rbx,[0x100000+8]
-; jmp $
+	
     jmp	rbx
 
 read_hard_disk_0:                                     ;从硬盘读取一个逻辑扇区

@@ -11,7 +11,7 @@ struc video_info
     .video_framebuffer: resq 1
     .end:
     endstruc
-video_info_ptr:
+video_info_ptr:;
     istruc video_info
         at video_info.xpixel, dw 0
         at video_info.ypixel, dw 0
@@ -47,6 +47,7 @@ video_init:;ARGB
 
 draw_pixel:; Input: x,y,color
     prolog 2;
+        ; jmp $
     get_param rdi, 1   ; x
     get_param rsi, 2   ; y
     get_param rdx, 3   ; c

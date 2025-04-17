@@ -32,7 +32,8 @@ head_kernel:
     mov	gs,	ax
     mov	ss,	ax
     mov	rsp,0xffff800000007E00
-
+	
+%if DEBUG_PLATFORM == PLATFORM_QEMU_X64
 	mov rdx,0
 	mov rax,section_end-section_start+64
 		; jmp $
@@ -90,7 +91,7 @@ pge:
 	;  mov dword [CORE_PHY_ADDR + 0x08], CORE_PHY_ADDR
 	;  mov dword [CORE_PHY_ADDR + 0x0c], 0
 
-
+%endif
 	mov rax,0x100000
 	lea rax,[rel head_end]
 	mov rbx,[rax+8]
@@ -228,8 +229,8 @@ IDT_POINTER:; [ORG  0xFFFF80000010400a]
 	IDT_LIMIT:	dw	IDT_END - IDT_Table - 1
 	IDT_BASE:	dq	IDT_Table + 0xFFFF800000000000
 TSS_POINTER:; [ORG  0xFFFF800000104014]
-	; TSS_LIMIT:	dw	TSS_END - TSS_Table - 1
-	TSS_LIMIT:	dw	TSS_END - TSS_Table
+	TSS_LIMIT:	dw	TSS_END - TSS_Table - 1
+	; TSS_LIMIT:	dw	TSS_END - TSS_Table
 	TSS_BASE:     dq	TSS_Table + 0xFFFF800000000000
 GDT_Table:;----------------------GDT_Table--------------------;
 	dq	0x0000000000000000			;/*0	NULL descriptor		       	00*/

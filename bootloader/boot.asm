@@ -1,3 +1,4 @@
+%include "../bootloader/global_def.asm"
 [BITS 16]          ; 16位实模式
 [ORG 0x7C00]       ; BIOS 加载引导扇区到 0x7C00    
     cli                 ; 禁用中断
@@ -22,9 +23,8 @@
 	mov	dx,	0000h
 	int	10h
 
-    ; 读取硬盘加载 Loader
-
-            ; 设置目标地址为 0x10000
+; 读取硬盘加载 Loader
+%if DEBUG_PLATFORM == PLATFORM_QEMU_X64
     mov ax, 0x1000
     mov es, ax     ; ES = 0x1000
     xor bx, bx     ; BX = 0x0000
@@ -36,13 +36,47 @@
          call read_hard_disk_0
          inc eax
          loop .loop_read        
+%else
+    ; 设置目标地址为 0x10000
+    mov ax, 0x1000
+    mov es, ax     ; ES = 0x1000
+    xor bx, bx     ; BX = 0x0000
 
-    ; call read_hard_disk_0
+    ; 设置 int 0x13 参数
+    mov ah, 0x02   ; 功能号：读取扇区
+    mov al, 7      ; 读取 7 个扇区
+    mov ch, 0      ; 柱面号 0
+    mov cl, 2      ; 扇区号 1（LBA 0）
+    mov dh, 0      ; 磁头号 0
+    mov dl, 0x80   ; 驱动器号：第一个硬盘
+    int 0x13       ; 调用 BIOS 中断
 
-    ; 跳转执行内核加载器 Loader
-    jmp 0x1000:0x0000
+    jc disk_error  ; 如果出错，跳转到错误处理
+%endif
+
+;     mov si, disk_error_msg
+;     call print_string
+
+; jmp $
+
     ; 读取成功，继续执行
+    jmp 0x1000:0x0000
 
+disk_error:
+    ; 打印错误消息
+    mov si, disk_error_msg
+    call print_string
+    jmp $            ; 停止 CPU
+print_string:
+    mov ah, 0x0E   ; BIOS 打印字符功能
+.next_char:
+    lodsb          ; 加载下一个字符到 al
+    cmp al, 0      ; 检查字符串结束
+    je .done
+    int 0x10       ; 调用 BIOS 中断打印字符
+    jmp .next_char
+.done:
+    ret
 ; ---------------------------------
 ; LBA 磁盘读取 (16 位)
 ; ---------------------------------
@@ -103,7 +137,7 @@ read_hard_disk_0:                                     ;从硬盘读取一个逻�
          ret
 
 message db "Master Boot Record Started!", 0
-
+disk_error_msg db "Disk read error!", 0
 ;-----------------------------------
 ; MBR 结束标志
 ;-----------------------------------

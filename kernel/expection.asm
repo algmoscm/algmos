@@ -8,9 +8,14 @@
 ; GDTPointerUpperAddr equ 0xFFFF800000104000
 ; IDTPointerUpperAddr equ 0xFFFF80000010400a
 ; TSSPointerUpperAddr equ 0xFFFF800000104004
+expection_default_message: db 'default expection:%x\n', 0
+expection_div_message: db 'divide expection:%x\n', 0
+expection_debug_message: db 'debug expection:%x\n', 0
 
-expection_div_messige: db 'divide expection', 0
-expection_error_code: db 0
+expection_error_code: dq 0
+
+
+
 ; ; 描述符类型常量
 %define INTGATE 0x8E    ; 64位中断门(P=1, DPL=00, 类型=1110)
 %define TRAPGATE 0x8F   ; 64位陷阱门(P=1, DPL=00, 类型=1111)
@@ -28,7 +33,7 @@ struc idt_info
     .offset_high:  resd 1  ; 64 偏移高32位(32..63)
 
     .reserved:     resd 1  ; 96 保留
-endstruc
+    endstruc
 init_expection:;init expection idt
     prolog 0;
     lea rsi,[rel default_exception_handler]
@@ -115,11 +120,15 @@ setup_default_expection_idt:;setup expection idt 0~31
 
 default_exception_handler:;
     ; mov rax,0xffff
+    lea rsi, [rel expection_default_message]
+    lea rdx, [rel expection_error_code]
+    function printk,1,rsi,rdx
+
     jmp $
     iretq
 div0_exception_handler:;
     ; mov rbx,0x1111
-    jmp $
+    ; jmp $
     push rax
     push rbx
     push rcx
@@ -137,12 +146,12 @@ div0_exception_handler:;
     push r15
 
 
-    lea rsi, [rel expection_div_messige]
-    ; mov rax,rsi
-    ; jmp $
-    function draw_string, 1, 0, 0, rsi
-    ; mov rax,0x88
-    ; jmp $
+    lea rsi, [rel expection_div_message]
+    lea rdx, [rel expection_error_code]
+    function printk,1,rsi,rdx
+
+
+    jmp $
     ; hlt
 
     pop r15
@@ -164,7 +173,7 @@ div0_exception_handler:;
     iretq
 debug_exception_handler:;
     ; mov rbx,0x2222
-    jmp $
+    ; jmp $
     push rax
     push rbx
     push rcx
@@ -182,10 +191,11 @@ debug_exception_handler:;
     push r15
 
 
-    lea rsi, [rel expection_div_messige]
-    function draw_string, 1, 0, 0, rsi
+    lea rsi, [rel expection_debug_message]
+    lea rdx, [rel expection_error_code]
+    function printk,1,rsi,rdx
+    jmp $
 
-    hlt
     pop r15
     pop r14
     pop r13

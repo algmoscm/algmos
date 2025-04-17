@@ -35,17 +35,25 @@ struc tss_descriptor
     .base_upper:     resd 1    ; 基地址的高 32 位（64 位地址支持）
     .reserved:       resd 1    ; 保留字段
 endstruc
+system_init:;input:kernel_end
+    prolog 0
+    get_param rsi, 1
+    function sys_vector_init
+    function video_init
+    function printk_init
+    function memory_init,1,rsi
 
-init_sys_vector:;init system interrupt vector
-    prolog 0;
-    ; jmp $
+
+    function test_printk
+    function test_video
+    function test_memory
+
+    epilog
+sys_vector_init:;init system interrupt vector
+    prolog 0
     function setup_default_tss
-        ; jmp $
     function init_expection
-    ; jmp $
     function init_interrupt
-    ; jmp $
-
 
     epilog
 setup_default_tss:;setup tss
@@ -102,6 +110,137 @@ setup_default_tss:;setup tss
     
     epilog
 
+
+test_printk:;test printk
+    prolog 2;
+
+    ; function draw_char,1,0,0,'A'
+    ; function print_char,1,'a'
+    ; function print_char,1,'b'
+
+    ; function print_char,1,'a'
+    ; function print_char,1,'b'
+    ;     function print_char,1,'a'
+    ; function print_char,1,'b'
+
+    ;     function print_char,1,'a'
+    ; function print_char,1,'b'
+
+
+    ;     lea rsi,[rel messages2]    
+    ;    function print_string,1,rsi
+
+    ;     lea rsi,[rel messages1]
+    ;     function print_string,1,rsi
+
+    ;     lea rsi,[rel messages2]    
+    ;    function print_string,1,rsi
+
+    ;     lea rsi,[rel messages1]
+    ;     function print_string,1,rsi
+
+    ;     lea rsi,[rel messages2]    
+    ;    function print_string,1,rsi
+
+    ;     lea rsi,[rel messages1]
+    ;     function print_string,1,rsi
+
+    ; lea rsi,[rel decimal_messages]    
+    ; function print_decimal,1,rsi
+
+    ; lea rsi,[rel hex_messages]    
+    ; function print_hex,1,rsi
+
+    ; lea rsi,[rel hex_messages]    
+    ; function print_hex,1,rsi
+
+    lea rsi, [rel format1]
+    lea rdx, [rel string1]
+    function printk,1,rsi,rdx
+
+
+    ; lea rsi, [rel format2]
+    ; lea rdx, [rel decimal_messages]
+    ; function printk,1,rsi,rdx
+
+    ; lea rsi, [rel format3]
+    ; lea rdx, [rel hex_messages]
+    ; function printk,1,rsi,rdx
+
+
+    ;     lea rsi,[rel decimal_messages]    
+    ; function print_decimal,1,rsi
+
+    ;     lea rsi,[rel decimal_messages]    
+    ; function print_decimal,1,rsi
+
+    ; lea rsi,[rel messages1]
+    ; function draw_string,1,0,20,rsi
+
+    ; lea rsi,[rel messages2]
+    ; function draw_string,1,0,40,rsi
+
+    ; lea rsi,[rel messages3]
+    ; function draw_string,1,0,60,rsi
+
+    ; lea rsi,[rel messages4]
+    ; function draw_string,1,0,80,rsi
+
+    ; lea rsi,[rel hex_messages]
+    ; function draw_hex,1,0,100,rsi
+
+    ; lea rsi,[rel decimal_messages]
+    ; function draw_decimal,1,0,120,rsi
+
+
+
+    epilog
+
+test_video:;test video
+    prolog 2;
+
+    ; function draw_screen,0,0x00000000
+    function draw_pixel,1,1000,200,0x00FFFFFF
+    function draw_line,1,1000,200,1500,400,0x00FFFFFF
+    function draw_rect,1,1100,300,1300,500,0x00FFFFFF
+    function draw_circle,1,1000,400,100,0x00FFFFFF
+    function draw_triangle,1,1000,100,1100,100,1050,200,0x00FFFFFF
+
+    epilog    
+
+test_memory:;test memory
+    prolog 2;
+
+
+
+    epilog
+    
+
+%include "../kernel/printk.asm"
 %include "../kernel/expection.asm"
 %include "../kernel/interrupt.asm"
+%include "../kernel/memory.asm"
+
+messages: db 'hello world,here to show printk function\n', 0
+
+messages1: db 'asdfghijklmnopqrstuvwxyz_ASDFGHJKLZXCVBNM1234567890\n', 0
+messages2: db 'Image format was not specified for ./hd60m.img and probing guessed raw\n', 0
+messages3: db 'Automatically detecting the format is dangerous for raw images, write operations on block 0 will be restricted.\n', 0
+
+messages4: db '../kernel/printk.asm:100: warning: word data exceeds bounds [-w+number-overflow]\n', 0
+messages5: db 'WARNING: Image format was not specified for ./hd60m.img and probing guessed raw.\n', 0
+messages6: db '25088 bytes (25 kB, 24 KiB) copied, 0.000134717 s, 186 MB/s\n', 0
+
+format1 db "Hello, %s!\n", 0
+format2 db "Physical address: %d", 0
+
+
+format3 db "Hex: %x\n", 0
+string1 db "World", 0
+
+hex_messages: dq 0x1234567
+decimal_messages: dq 0
+params: times 10 dq 0x12345
+messagess: times 10 db 0
+
 %endif

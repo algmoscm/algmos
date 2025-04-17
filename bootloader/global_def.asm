@@ -1,5 +1,9 @@
 %ifndef GLOBAL_DEF_ASM
 %define GLOBAL_DEF_ASM
+%define PLATFORM_QEMU_X64 1
+%define PLATFORM_X64 2
+%define DEBUG_PLATFORM PLATFORM_QEMU_X64
+%define DEBUG_MODE 1
 
 
 ;|----------------------|
@@ -148,11 +152,6 @@ VideoFrameBufferAddress equ 0xFFFF800003000000
 KernelStartSectorNum	equ	16
 
 
-%define PLATFORM_QEMU_X64 1
-%define PLATFORM_X64 2
-
-%define DEBUG_PLATFORM PLATFORM_QEMU_X64
-%define DEBUG_MODE 1
 
 
 MasterSectorReadNumPort    equ	0x1F2

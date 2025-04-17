@@ -40,7 +40,7 @@ struc print_info
     .default_color:        resd 1
     .current_color:        resd 1
  endstruc
-print_info_ptr:
+print_info_ptr:;
     istruc print_info
         at print_info.cursor_xposition, dw 0
         at print_info.cursor_yposition, dw 0
@@ -253,8 +253,8 @@ print_decimal:;input:rsi=decimal number
 
     get_param rsi, 1   ; dec
 
-    mov rbx, 'D'
-    function print_char,1,rbx    
+    ; mov rbx, 'D'
+    ; function print_char,1,rbx    
 
     xor rax, rax
     xor rbx, rbx
@@ -291,8 +291,8 @@ print_hex:;input:rsi=hex number
 
     get_param rsi, 1   ; dec
 
-    mov rbx, 'X'
-    function print_char,1,rbx    
+    ; mov rbx, 'X'
+    ; function print_char,1,rbx    
 
     xor rax, rax
     xor rbx, rbx
