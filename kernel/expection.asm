@@ -76,7 +76,7 @@ register_expection_idt:;vector_num,rsp,handler
     mov word [rax + idt_info.offset_low], di
         ; mov ax,di
     ; jmp $
-    mov word [rax + idt_info.selector], 0x08
+    mov word [rax + idt_info.selector], KernelCodeSelector
     mov byte [rax + idt_info.ist], cl
     mov byte [rax + idt_info.type_attr], TRAPGATE
     mov word [rax + idt_info.offset_mid], r9w
@@ -100,7 +100,7 @@ setup_default_expection_idt:;setup expection idt 0~31
 
     .expection_idt:
         mov word [rax + idt_info.offset_low], si
-        mov word [rax + idt_info.selector], 0x08
+        mov word [rax + idt_info.selector], KernelCodeSelector
 
         mov byte [rax + idt_info.ist], 0x01
         mov byte [rax + idt_info.type_attr], TRAPGATE
@@ -112,7 +112,7 @@ setup_default_expection_idt:;setup expection idt 0~31
         add rax, 16
         inc rcx
         cmp rcx, 32
-        jle .expection_idt
+        jl .expection_idt
 
     lidt	[rbx]
     epilog

@@ -422,8 +422,13 @@ draw_char:; input: x,y,char; draw a character
             .pixel_2byte:
                 mov byte [rdi], 0xFF ; 绘制像素(白色)
                 mov byte [rdi+1], 0xFF ; 绘制像素(白色)
-            ; jmp $
+            jmp .pixel_write_done
         .skip_pixel:
+            mov byte [rdi+2], 0x00 ; 绘制像素(白色)
+            mov byte [rdi+3], 0x00 ; 绘制像素(白色)
+            mov byte [rdi], 0x00 ; 绘制像素(白色)
+            mov byte [rdi+1], 0x00 ; 绘制像素(白色)
+            .pixel_write_done:
             shl dl, 1           ; 移到下一位
             add rdi,rax
             dec dh
@@ -456,6 +461,9 @@ draw_string:; input: x,y,string; draw string
         lodsb                  
         test al, al
         jz .done
+        mov rbx, 0
+        mov bl, " "
+        function draw_char,1,r8,r9,rbx ;clear char
         mov rbx, 0
         mov bl, al
         function draw_char,1,r8,r9,rbx

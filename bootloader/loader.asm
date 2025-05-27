@@ -97,7 +97,7 @@ loader_code_Start:
 
     ; 设置 int 0x13 参数
     mov ah, 0x02   ; 功能号：读取扇区
-    mov al, 68      ; 读取 1 个扇区
+    mov al, 100      ; 读取 1 个扇区
     mov ch, 0      ; 柱面号 0
     mov cl, 17      ; 扇区号 1（LBA 0）
     mov dh, 0      ; 磁头号 0
@@ -110,7 +110,7 @@ loader_code_Start:
 	push	ds
 	push	esi
 
-	mov	cx,	512*68
+	mov	cx,	512*100
 
 	mov	edi,OffsetOfKernelFile
 
@@ -280,15 +280,22 @@ test_vga_mode:
 	mov dl, byte [es:VBEModeStructBufferAddr + vbe_mode_info_block.bits_per_pixel]  ; pixel byte 
 
 %if DEBUG_PLATFORM == PLATFORM_QEMU_X64
-	cmp ax, 0x780
+	cmp ax, 1920
     jnz .mode_failed
 %else
     cmp ax, word [max_width]
     jb .mode_failed
 %endif
 
+%if DEBUG_PLATFORM == PLATFORM_QEMU_X64
+	cmp bx, 1080
+    jnz .mode_failed
+%else
     cmp bx, word [max_height]
     jb .mode_failed
+%endif
+    ; cmp bx, word [max_height]
+    ; jb .mode_failed
 	cmp dl, byte [byte_per_pixel]
     jb .mode_failed
     ;  jmp	$   
@@ -301,10 +308,6 @@ test_vga_mode:
 	.mode_failed:
 		popa
 		ret
-
-
-
-
 
 
 

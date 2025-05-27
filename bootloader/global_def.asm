@@ -140,7 +140,10 @@ VBEStructBufferAddr	equ	0x8000
 VBEModeStructBufferAddr	equ	0x8200
 MemoryStructBufferAddr	equ	0x8800
 
-
+KernelCodeSelector      equ 0x08
+KernelDataSelector      equ 0x10
+UserCodeSelector      equ 0x18
+UserDataSelector      equ 0x20
 
 KernelSpaceUpperAddress equ 0xFFFF800000000000
 

@@ -4,74 +4,106 @@
 ;-----------Data Type Standard------------;
 %define USE_DT_STANDARD
 %ifdef USE_DT_STANDARD
-    %macro gbyte 1 ; 参数1：变量名, 参数2：初始值(1字节)
-        %1: db %2
-        %endmacro
+;     %macro gbyte 1 ; 参数1：变量名, 参数2：初始值(1字节)
+;         %1: db %2
+;         %endmacro
 
-    %macro g2byte 1 ; 参数1：变量名, 参数2：初始值(4字节)
-        %1: dw %2
-        %endmacro
+;     %macro g2byte 1 ; 参数1：变量名, 参数2：初始值(4字节)
+;         %1: dw %2
+;         %endmacro
 
-    %macro g4byte 1 ; 参数1：变量名, 参数2：初始值(4字节)
-        %1: dd %2
-        %endmacro
+;     %macro g4byte 1 ; 参数1：变量名, 参数2：初始值(4字节)
+;         %1: dd %2
+;         %endmacro
 
-    %macro g8byte 1 ; 参数1：变量名, 参数2：初始值(8字节)
-        %1: dq %2
-        %endmacro
+;     %macro g8byte 1 ; 参数1：变量名, 参数2：初始值(8字节)
+;         %1: dq %2
+;         %endmacro
+
+; %define UNIQUE_ID_IMPL(name, line) name %+ _ %+ line
+; %define UNIQUE_ID(name) UNIQUE_ID_IMPL(name, __LINE__)
+;     ; %macro lvar 1
+;     ;     %define %1 qword [rbp - 112-(__local_offset + 8)]
+
+;     ;     %assign __local_offset  __local_offset + 8
+
+;     ;     sub rsp, 8
+;     ;     %endmacro
+
+;     ; 初始化局部变量追踪
+;     %macro LOCAL_BEGIN 0
+;         %push local_ctx              ; 创建新的局部上下文
+;         %assign %$local_offset 0     ; 初始化局部偏移计数器
+;     %endmacro
 
 
-    ; %macro lvar 1
-    ;     %define %1 qword [rbp - 112-(__local_offset + 8)]
+;     %macro lvar 1
+;         %assign %$local_offset %$local_offset+8
+;         %define %$var_%1 %$local_offset
+;         %define %1  qword[rbp-%$var_%1]
+;         sub rsp,8
+;     %endmacro
 
-    ;     %assign __local_offset  __local_offset + 8
+    ; %macro lstr 2
+    ;     %ifstr %2
+    ;         %strlen len %2
+    ;         %assign %$local_offset %$local_offset+len+1   ; 累加偏移
+    ;         %define %$str_%1 %$local_offset               ; 定义变量偏移
+    ;         %define %1  [rbp - %$str_%1]
+    ;         %define %1.size len+1
+    ;         sub rsp,%1.size
+    ;     %endif
+    ;         mov rcx, %3
+    ;         mov rdi, ebp
+    ;         add rdi, %$var_%1
+    ;         lea rsi, [%2]
+    ;         rep movsb
+    ; %endmacro
 
-    ;     sub rsp, 8
-    ;     %endmacro
+    ; %macro lstr_copy 2-3
+    ;     %ifctx local_ctx
+    ;         %if %0 == 3
+    ;             ; 带长度的字符串复制
+    ;             mov ecx, %3
+    ;             mov edi, ebp
+    ;             add edi, %$var_%1
+    ;             lea esi, [%2]
+    ;             rep movsb
+    ;         %else
+    ;             ; 以null结尾的字符串复制
+    ;             mov edi, ebp
+    ;             add edi, %$var_%1
+    ;             lea esi, [%2]
+    ;             %%copy_loop:
+    ;             lodsb
+    ;             stosb
+    ;             test al, al
+    ;             jnz %%copy_loop
+    ;         %endif
+    ;     %else
+    ;         %error "STR_COPY used outside local_ctx block"
+    ;     %endif
+    ; %endmacro
 
-    ; 初始化局部变量追踪
-    %macro LOCAL_BEGIN 0
-        %push local_ctx              ; 创建新的局部上下文
-        %assign %$local_offset 0     ; 初始化局部偏移计数器
-    %endmacro
+    ; %macro lstruct 1
+    ;     %assign %$local_offset %$local_offset+8   ; 累加偏移
+    ;     %define %$struct_%1 %$local_offset               ; 定义变量偏移
+    ;     %define %1  rbp - %$struct_%1
+    ;     %define %1.size 5
+    ;     sub rsp,%1.size
+    ; %endmacro
 
-    ; 定义局部变量
-    ; %1 - 变量名
-    ; %2 - 变量大小(字节)
-    %macro lvar 1
-        %assign %$local_offset %$local_offset+8   ; 累加偏移
-        %define %$var_%1 %$local_offset               ; 定义变量偏移
-        %define %1 qword [rbp - %$var_%1]
-        sub rsp,8
-    %endmacro
-
-    %macro lstr 1
-        %assign %$local_offset %$local_offset+8   ; 累加偏移
-        %define %$str_%1 %$local_offset               ; 定义变量偏移
-        %define %1  rbp - %$str_%1
-        %define %1.size 5
-        sub rsp,%1.size
-    %endmacro
-
-    %macro lstruct 1
-        %assign %$local_offset %$local_offset+8   ; 累加偏移
-        %define %$str_%1 %$local_offset               ; 定义变量偏移
-        %define %1  rbp - %$str_%1
-        %define %1.size 5
-        sub rsp,%1.size
-    %endmacro
-
-    ; 分配栈空间并保存寄存器
-    %macro lalloc 0
-        %if %$local_offset > 0
-            ; 16字节对齐
-            %assign pad (16 - (%$local_offset % 16))
-            %if pad < 16
-                %assign %$local_offset %$local_offset + pad
-            %endif
-            sub rsp, %$local_offset
-        %endif
-    %endmacro
+    ; ; 分配栈空间并保存寄存器
+    ; %macro lalloc 0
+    ;     %if %$local_offset > 0
+    ;         ; 16字节对齐
+    ;         %assign pad (16 - (%$local_offset % 16))
+    ;         %if pad < 16
+    ;             %assign %$local_offset %$local_offset + pad
+    ;         %endif
+    ;         sub rsp, %$local_offset
+    ;     %endif
+    ; %endmacro
 
 
     ; ; 获取局部变量的访问表达式
@@ -142,16 +174,18 @@
         ; 如果有参数，将参数压入栈
         %if param_count > 0
             %assign i 0
-            mov [rsp-8], rax ; 保存返回地址
+            ; mov [rsp-8], rax ; 保存返回地址
             %rep param_count
                 %rotate 1
-                mov rax, %2
-                mov [rsp + 8*i], rax ; 将参数压入栈
+                ; mov rax, %2
+                ; mov [rsp + 8*i],qword %2 ; 将参数压入栈
+                push qword %2
+                pop qword [rsp + 8*i]
                 %assign i i+1
             %endrep
             %rotate 1
             %rotate 1
-            mov rax,[rsp-8]; 保存返回地址
+            ; mov rax,[rsp-8]; 保存返回地址
         %endif
 
         ; 调用函数
@@ -169,32 +203,32 @@
         %%skip_align:
     %endmacro
 
-    %macro prologue 0;local var size(bytes)
-        push rbp
-        mov rbp, rsp
+    ; %macro prologue 0;local var size(bytes)
+    ;     push rbp
+    ;     mov rbp, rsp
 
 
-        pushallq
-        LOCAL_BEGIN
+    ;     pushallq
+    ;     LOCAL_BEGIN
         
 
-        ; 调试信息可以放在这里
-        ; %ifdef DEBUG
-        ;     mov [rbp-8], rdi    ; 保存第一个参数用于调试
-        ; %endif
-    %endmacro
-    %macro epilogue 0
-        %pop
-        mov rax, rbp
-        sub rax, 8*14
-        mov rsp, rax
+    ;     ; 调试信息可以放在这里
+    ;     ; %ifdef DEBUG
+    ;     ;     mov [rbp-8], rdi    ; 保存第一个参数用于调试
+    ;     ; %endif
+    ; %endmacro
+    ; %macro epilogue 0
+    ;     %pop
+    ;     mov rax, rbp
+    ;     sub rax, 8*14
+    ;     mov rsp, rax
 
-        popallq
+    ;     popallq
 
-        mov rsp, rbp
-        pop rbp
-        ret
-    %endmacro
+    ;     mov rsp, rbp
+    ;     pop rbp
+    ;     ret
+    ; %endmacro
 
     %macro prolog 1;local var size(bytes)
         push rbp

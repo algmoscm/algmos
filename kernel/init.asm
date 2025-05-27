@@ -4,7 +4,17 @@
 %include "../bootloader/global_def.asm"
 %include "../kernel/stddef.asm"
 
+
+%include "../kernel/printk.asm"
+%include "../kernel/expection.asm"
+%include "../kernel/interrupt.asm"
+%include "../kernel/memory.asm"
+
 [BITS 64]
+
+page_info_msg1 db "page attribute:%x     ", 0
+
+page_info_msg2 db "page address:%x\n", 0
 
 struc tss_table_info
     .reserved1:      resd 1
@@ -38,15 +48,19 @@ endstruc
 system_init:;input:kernel_end
     prolog 0
     get_param rsi, 1
-    function sys_vector_init
+    
     function video_init
     function printk_init
-    function memory_init,1,rsi
+    function sys_vector_init
+
+
+    ; function memory_init,1,rsi
 
 
     function test_printk
     function test_video
-    function test_memory
+
+    ; function test_memory
 
     epilog
 sys_vector_init:;init system interrupt vector
@@ -139,11 +153,7 @@ test_printk:;test printk
     ;     lea rsi,[rel messages1]
     ;     function print_string,1,rsi
 
-    ;     lea rsi,[rel messages2]    
-    ;    function print_string,1,rsi
 
-    ;     lea rsi,[rel messages1]
-    ;     function print_string,1,rsi
 
     ; lea rsi,[rel decimal_messages]    
     ; function print_decimal,1,rsi
@@ -154,11 +164,111 @@ test_printk:;test printk
     ; lea rsi,[rel hex_messages]    
     ; function print_hex,1,rsi
 
+    ; lea rsi, [rel format1]
+    ; lea rdx, [rel string1]
+    ; function printk,1,rsi,rdx
+
+    ; lea rsi, [rel format1]
+    ; lea rdx, [rel string1]
+    ; function printk,1,rsi,rdx
+
+    ;     lea rsi, [rel format1]
+    ; lea rdx, [rel string1]
+    ; function printk,1,rsi,rdx
+
+    ;     lea rsi, [rel format1]
+    ; lea rdx, [rel string1]
+    ; function printk,1,rsi,rdx
+
+    ; lea rsi, [rel format1]
+    ; lea rdx, [rel string1]
+    ; function printk,1,rsi,rdx
+
+
+    ;         lea rsi,[rel messages]    
+    ;    function print_string,1,rsi
+
+        lea rsi,[rel messages3]
+        function print_string,1,rsi
+
     lea rsi, [rel format1]
     lea rdx, [rel string1]
     function printk,1,rsi,rdx
 
+    ;     lea rsi, [rel format1]
+    ; lea rdx, [rel string1]
+    ; function printk,1,rsi,rdx
 
+    ;     lea rsi, [rel format1]
+    ; lea rdx, [rel string1]
+    ; function printk,1,rsi,rdx
+
+    ; lea rsi, [rel format1]
+    ; lea rdx, [rel string1]
+    ; function printk,1,rsi,rdx
+
+
+    ;         lea rsi,[rel messages]    
+    ;    function print_string,1,rsi
+
+    ;     lea rsi,[rel messages3]
+    ;     function print_string,1,rsi
+
+    ;         lea rsi, [rel format1]
+    ; lea rdx, [rel string1]
+    ; function printk,1,rsi,rdx
+
+    ; lea rsi, [rel format1]
+    ; lea rdx, [rel string1]
+    ; function printk,1,rsi,rdx
+
+    ;     lea rsi, [rel format1]
+    ; lea rdx, [rel string1]
+    ; function printk,1,rsi,rdx
+
+    ;     lea rsi, [rel format1]
+    ; lea rdx, [rel string1]
+    ; function printk,1,rsi,rdx
+
+    ; lea rsi, [rel format1]
+    ; lea rdx, [rel string1]
+    ; function printk,1,rsi,rdx
+
+
+    ;         lea rsi,[rel messages]    
+    ;    function print_string,1,rsi
+
+    ;     lea rsi,[rel messages3]
+    ;     function print_string,1,rsi
+
+    ;         lea rsi, [rel format1]
+    ; lea rdx, [rel string1]
+    ; function printk,1,rsi,rdx
+
+    ; lea rsi, [rel format1]
+    ; lea rdx, [rel string1]
+    ; function printk,1,rsi,rdx
+
+    ;     lea rsi, [rel format1]
+    ; lea rdx, [rel string1]
+    ; function printk,1,rsi,rdx
+
+    ;     lea rsi, [rel format1]
+    ; lea rdx, [rel string1]
+    ; function printk,1,rsi,rdx
+
+    ; lea rsi, [rel format1]
+    ; lea rdx, [rel string1]
+    ; function printk,1,rsi,rdx
+
+
+    ;         lea rsi,[rel messages]    
+    ;    function print_string,1,rsi
+
+    ;     lea rsi,[rel messages3]
+    ;     function print_string,1,rsi
+
+    
     ; lea rsi, [rel format2]
     ; lea rdx, [rel decimal_messages]
     ; function printk,1,rsi,rdx
@@ -199,27 +309,107 @@ test_printk:;test printk
 test_video:;test video
     prolog 2;
 
+    xor rax,rax 
+    xor rdx,rdx
+    mov ax,word [rel video_info_ptr + video_info.xpixel]
+    mov [rel decimal_messages], rax
+    lea rsi, [rel init_video_xpixel]
+    lea rdx, [rel decimal_messages]
+    function printk,1,rsi,rdx
+
+    xor rax,rax 
+    xor rdx,rdx
+    mov ax,word [rel video_info_ptr + video_info.ypixel]
+    mov [rel decimal_messages], rax
+    lea rsi, [rel init_video_ypixel]
+    lea rdx, [rel decimal_messages]
+    function printk,1,rsi,rdx
+
+    xor rax,rax 
+    xor rdx,rdx
+    mov ax,word [rel video_info_ptr + video_info.byte_per_pixel]
+    mov [rel decimal_messages], rax
+    lea rsi, [rel init_video_byteperpixel]
+    lea rdx, [rel decimal_messages]
+    function printk,1,rsi,rdx
+
+
+
     ; function draw_screen,0,0x00000000
     function draw_pixel,1,1000,200,0x00FFFFFF
-    function draw_line,1,1000,200,1500,400,0x00FFFFFF
+    function draw_line,1,1100,300,1300,500,0x00FFFFFF
+    function draw_line,1,1300,300,1100,500,0x00FFFFFF
     function draw_rect,1,1100,300,1300,500,0x00FFFFFF
-    function draw_circle,1,1000,400,100,0x00FFFFFF
-    function draw_triangle,1,1000,100,1100,100,1050,200,0x00FFFFFF
+    function draw_circle,1,1200,400,100,0x00FFFFFF
+    function draw_triangle,1,1150,200,1250,200,1200,300,0x00FFFFFF
 
     epilog    
 
 test_memory:;test memory
     prolog 2;
 
+    ; After memory initialization, add:
+
+    ; Allocate 64 pages from ZONE_NORMAL
+    mov rdi, ZONE_NORMAL
+    mov rsi, 2
+    mov rdx, PG_PTable_Maped | PG_Active | PG_Kernel
+
+
+    function alloc_pages, 1, rdi, rsi, rdx
+
+    function alloc_pages, 1, rdi, rsi, rdx
+
+
+    mov rax,[rsp-8]
+    mov r12, rax                    ; Save page pointer
+
+    ; Print info for each pair of pages
+    xor r13, r13                    ; i = 0
+    mov r14,rsi
+    .print_pages_loop:
+        ; Print first page of pair
+        ; mov [rel memory_hex_messages], r13
+        ; mov rax, [r12 + r13 * 40 + page_info.page_attribute]
+
+        ; mov [rel memory_hex_messages + 8], rax
+        ; mov rax, [r12 + r13 * 40 + page_info.physical_address]
+        ; mov [rel memory_hex_messages + 16], rax
+
+        mov rax,r13
+        mov rcx,40
+        mul rcx
+        add rax, r12
+
+        mov rsi, [rax + page_info.page_attribute]
+        mov [rel hex_messages], rsi
+        lea rsi, [rel page_info_msg1]
+        lea rdx, [rel hex_messages]
+        function printk, 1, rsi, rdx
+
+        mov rdx, [rax + page_info.physical_address]
+        mov [rel hex_messages], rdx
+        lea rsi, [rel page_info_msg2]
+        lea rdx, [rel hex_messages]
+        function printk, 1, rsi, rdx
+
+        ; Move to next pair
+        inc r13
+        cmp r13, r14
+        jl .print_pages_loop
+
 
 
     epilog
     
 
-%include "../kernel/printk.asm"
-%include "../kernel/expection.asm"
-%include "../kernel/interrupt.asm"
-%include "../kernel/memory.asm"
+
+
+
+
+init_video_xpixel: db '[video info]     xpixel:%d',0
+init_video_ypixel: db '    ypixel:%d',0
+init_video_byteperpixel: db '    byte per pixel:%d\n',0
 
 messages: db 'hello world,here to show printk function\n', 0
 
@@ -238,7 +428,7 @@ format2 db "Physical address: %d", 0
 format3 db "Hex: %x\n", 0
 string1 db "World", 0
 
-hex_messages: dq 0x1234567
+hex_messages: dq 0
 decimal_messages: dq 0
 params: times 10 dq 0x12345
 messagess: times 10 db 0
